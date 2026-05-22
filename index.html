@@ -1,0 +1,401 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STI College Naga - Library System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="public/css/style.css">
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav id="main-nav">
+  <div class="nav-brand" onclick="showPage('home')">
+    <div class="nav-logo"><i class="fas fa-book-open"></i></div>
+    <div class="nav-title">LibTrack<span>Library System</span></div>
+  </div>
+  <div class="nav-links" id="nav-links">
+    <button class="nav-link active" id="nav-home"    onclick="showPage('home')">   <i class="fas fa-home"></i><span>Home</span></button>
+    <button class="nav-link"        id="nav-logbook" onclick="showPage('logbook')"><i class="fas fa-clipboard-list"></i><span>Logbook</span></button>
+    <button class="nav-link"        id="nav-borrow"  onclick="showPage('borrow')"> <i class="fas fa-book"></i><span>Borrow</span></button>
+    <button class="nav-link"        id="nav-return"  onclick="showPage('return')"> <i class="fas fa-undo"></i><span>Return</span></button>
+  </div>
+  <div class="nav-right">
+    <button class="lock-btn" onclick="openAdminLogin()" title="Librarian Login"><i class="fas fa-lock"></i></button>
+    <button class="hamburger" id="hamburger" onclick="toggleDrawer()"><i class="fas fa-bars"></i></button>
+  </div>
+</nav>
+
+<!-- MOBILE DRAWER -->
+<div class="drawer-bg" id="drawer-bg" onclick="toggleDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-top">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="nav-logo"><i class="fas fa-book-open"></i></div>
+      <div class="nav-title">STI College Naga<span>Library System</span></div>
+    </div>
+    <button class="drawer-x" onclick="toggleDrawer()"><i class="fas fa-times"></i></button>
+  </div>
+  <button class="drawer-item active" id="dnav-home"    onclick="showPage('home');toggleDrawer()">   <i class="fas fa-home"></i> Home</button>
+  <button class="drawer-item"        id="dnav-logbook" onclick="showPage('logbook');toggleDrawer()"><i class="fas fa-clipboard-list"></i> Logbook</button>
+  <button class="drawer-item"        id="dnav-borrow"  onclick="showPage('borrow');toggleDrawer()"> <i class="fas fa-book"></i> Borrow Book</button>
+  <button class="drawer-item"        id="dnav-return"  onclick="showPage('return');toggleDrawer()"> <i class="fas fa-undo"></i> Return Book</button>
+  <div class="drawer-sep"></div>
+  <button class="drawer-item drawer-lock" onclick="openAdminLogin();toggleDrawer()"><i class="fas fa-lock"></i> Librarian Login</button>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="overlay" id="modal-login">
+  <div class="modal login-modal">
+    <div class="login-header">
+      <div class="login-icon"><i class="fas fa-shield-alt"></i></div>
+      <h2>Librarian Access</h2>
+      <p>Enter your credentials to continue.</p>
+    </div>
+    <div class="login-err hidden" id="login-err"><i class="fas fa-exclamation-circle"></i> <span id="login-err-msg">Incorrect credentials.</span></div>
+    <div class="form-group">
+      <label class="flabel">Username</label>
+      <div class="input-icon-wrap"><i class="fas fa-user"></i><input class="finput" id="l-user" placeholder="Username" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    </div>
+    <div class="form-group">
+      <label class="flabel">Password</label>
+      <div class="input-icon-wrap"><i class="fas fa-lock"></i><input class="finput" id="l-pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"><button class="eye-btn" id="eye-btn" onclick="toggleEye()"><i class="fas fa-eye"></i></button></div>
+    </div>
+    <button class="btn btn-primary btn-full btn-lg" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
+    <button class="btn btn-ghost btn-full" onclick="closeOverlay('modal-login')" style="margin-top:8px;">Cancel</button>
+    <div class="login-hint"><i class="fas fa-info-circle"></i> Default: <b>admin</b> / <b>sti2024</b></div>
+  </div>
+</div>
+
+<!-- ADMIN SHELL -->
+<div id="admin-shell" class="hidden">
+  <div class="admin-bar">
+    <div class="admin-bar-left">
+      <div class="admin-bar-icon"><i class="fas fa-shield-alt"></i></div>
+      <div><div class="admin-bar-title">Admin Dashboard</div><div class="admin-bar-sub">STI College Naga Library</div></div>
+    </div>
+    <div class="admin-bar-right">
+      <span class="admin-user"><i class="fas fa-user-shield"></i> <span id="admin-uname">admin</span></span>
+      <button class="btn btn-outline btn-sm" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </div>
+  </div>
+  <div class="admin-wrap">
+    <aside class="admin-sidebar">
+      <div class="sidebar-badge">STI College Naga</div>
+      <div class="sidebar-lbl">Admin Panel</div>
+      <button class="s-item active" id="amenu-overview"       onclick="showPanel('overview')">     <i class="fas fa-tachometer-alt"></i> Overview</button>
+      <button class="s-item"        id="amenu-books"          onclick="showPanel('books')">         <i class="fas fa-book"></i> Manage Acquisition</button>
+      <button class="s-item"        id="amenu-students"       onclick="showPanel('students')">      <i class="fas fa-users"></i> Students</button>
+      <button class="s-item"        id="amenu-logbook-view"   onclick="showPanel('logbook-view')">  <i class="fas fa-clipboard-list"></i> Logbook</button>
+      <button class="s-item"        id="amenu-borrow-history" onclick="showPanel('borrow-history')"><i class="fas fa-exchange-alt"></i> Borrow History</button>
+      <button class="s-item"        id="amenu-reports"        onclick="showPanel('reports')">       <i class="fas fa-chart-bar"></i> Reports</button>
+      <button class="s-item"        id="amenu-closed-days"    onclick="showPanel('closed-days')">   <i class="fas fa-calendar-times"></i> Closed Days</button>
+      <button class="s-item s-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </aside>
+    <div class="admin-content">
+      <!-- Overview -->
+      <div class="a-panel active" id="apanel-overview">
+        <h2 class="ptitle">Dashboard Overview</h2>
+        <div class="stat-cards" id="overview-stats"></div>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clock"></i> Recent Activity</h3></div><div class="tbl-scroll"><table><thead><tr><th>Type</th><th>Student</th><th>Time</th></tr></thead><tbody id="tb-activity"></tbody></table></div></div>
+      </div>
+      <!-- Books -->
+      <div class="a-panel" id="apanel-books">
+        <div class="panel-head"><h2 class="ptitle">Manage Acquisition</h2><button class="btn btn-primary btn-sm" onclick="openAddBook()"><i class="fas fa-plus"></i> Add Acquisition</button></div>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-book"></i> Catalogue</h3><div class="table-tools"><select class="fselect tselect" id="book-type-filter" onchange="filterBooks()"><option value="">All Types</option><option value="Book">Book</option><option value="Thesis/Capstone Project">Thesis/Capstone Project</option><option value="Research Papers">Research Papers</option></select><input class="tsearch" id="book-search" placeholder="Search..." oninput="filterBooks(this.value)"></div></div><div class="tbl-scroll"><table><thead><tr><th>Acq. No.</th><th>Type</th><th>Date Acquired</th><th>Author/Editor</th><th>Title</th><th>Published Year</th><th>Status</th><th>Actions</th></tr></thead><tbody id="tb-books"></tbody></table></div></div>
+      </div>
+      <!-- Students -->
+      <div class="a-panel" id="apanel-students">
+        <div class="panel-head"><h2 class="ptitle">Registered Students</h2><div style="display:flex;gap:8px;flex-wrap:wrap;"><input class="tsearch" placeholder="Search..." oninput="filterStudents(this.value)" style="width:200px"><button class="btn btn-primary btn-sm" onclick="openAddStudent()"><i class="fas fa-user-plus"></i> Add Student</button></div></div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:12px;"><i class="fas fa-info-circle" style="color:#2563eb"></i> Students listed here appear in the autocomplete search on the Logbook page.</p>
+        <div class="tbl-wrap"><div class="tbl-scroll"><table><thead><tr><th>Student ID</th><th>Full Name</th><th>Course</th><th>Section</th><th>Actions</th></tr></thead><tbody id="tb-students"></tbody></table></div></div>
+      </div>
+      <!-- Logbook View -->
+      <div class="a-panel" id="apanel-logbook-view">
+        <h2 class="ptitle">All Logbook Entries</h2>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clipboard-list"></i> Visitor Log</h3><input class="tsearch" placeholder="Search..." oninput="filterAdminLog(this.value)"></div><div class="tbl-scroll"><table><thead><tr><th>Date</th><th>Student ID</th><th>Name</th><th>Course/Sec</th><th>Time In</th></tr></thead><tbody id="tb-log"></tbody></table></div></div>
+      </div>
+      <!-- Borrow History -->
+      <div class="a-panel" id="apanel-borrow-history">
+        <h2 class="ptitle">Borrowing History</h2>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-exchange-alt"></i> All Records</h3><input class="tsearch" placeholder="Search..." oninput="filterBorrowHistory(this.value)"></div><div class="tbl-scroll"><table><thead><tr><th>Student ID</th><th>Name</th><th>Acq. No.</th><th>Book Title</th><th>Author</th><th>Borrowed</th><th>Due</th><th>Returned</th><th>Fee</th><th>Status</th></tr></thead><tbody id="tb-borrows"></tbody></table></div></div>
+      </div>
+      <!-- Reports -->
+      <div class="a-panel" id="apanel-reports">
+        <h2 class="ptitle">Auto Report Generator</h2>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Tap any report type to generate instantly.</p>
+        <div class="rpt-btns">
+          <button class="btn btn-primary"  onclick="genReport('daily')">  <i class="fas fa-calendar-day"></i> Daily Visitors</button>
+          <button class="btn btn-success"  onclick="genReport('borrowed')"><i class="fas fa-book"></i> Borrowed Books</button>
+          <button class="btn btn-danger"   onclick="genReport('overdue')"> <i class="fas fa-exclamation-triangle"></i> Overdue</button>
+          <button class="btn btn-outline"  onclick="genReport('all')">     <i class="fas fa-file-alt"></i> Full Report</button>
+        </div>
+        <!-- Change password -->
+        <div class="card" style="margin-top:20px;">
+          <div class="card-head"><h3><i class="fas fa-key"></i> Change Password</h3></div>
+          <div class="card-body">
+            <div class="frow">
+              <div class="form-group"><label class="flabel">Current Password</label><input class="finput" id="cp-cur" type="password" placeholder="Current"></div>
+              <div class="form-group"><label class="flabel">New Password</label><input class="finput" id="cp-new" type="password" placeholder="New (min 6 chars)"></div>
+              <div class="form-group"><label class="flabel">Confirm New</label><input class="finput" id="cp-con" type="password" placeholder="Confirm"></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="changePassword()"><i class="fas fa-save"></i> Update Password</button>
+          </div>
+        </div>
+        <div id="rpt-out" style="margin-top:20px;"></div>
+      </div>
+      <!-- Closed Days -->
+      <div class="a-panel" id="apanel-closed-days">
+        <h2 class="ptitle">Non-Counted Days</h2>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Weekends are skipped automatically. Add holidays or school closure dates here.</p>
+        <div class="card" style="margin-bottom:18px;">
+          <div class="card-head"><h3><i class="fas fa-calendar-plus"></i> Add Holiday / Closed Day</h3></div>
+          <div class="card-body">
+            <div class="frow">
+              <div class="form-group"><label class="flabel">Date *</label><input class="finput" id="closed-date" type="date"></div>
+              <div class="form-group"><label class="flabel">Reason</label><input class="finput" id="closed-label" placeholder="e.g. Holiday, Foundation Day"></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addClosedDay()"><i class="fas fa-plus"></i> Add Closed Day</button>
+          </div>
+        </div>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-calendar-times"></i> Saved Non-Counted Days</h3></div><div class="tbl-scroll"><table><thead><tr><th>Date</th><th>Day</th><th>Reason</th><th>Action</th></tr></thead><tbody id="tb-closed-days"></tbody></table></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT PAGES -->
+
+<!-- HOME -->
+<div class="page active" id="page-home">
+  <div class="hero">
+    <div class="hero-in">
+      <div class="hero-badge"><i class="fas fa-graduation-cap"></i> STI College Naga</div>
+      <h1>Welcome to the<br><span>STI Naga Library</span></h1>
+      <p>A smart system for managing student visits, book borrowing and returns - simple and fast.</p>
+      <div class="hero-btns">
+        <button class="btn-hw" onclick="showPage('logbook')"><i class="fas fa-clock"></i> Log Your Visit</button>
+        <button class="btn-hg" onclick="showPage('borrow')"><i class="fas fa-book"></i> Borrow a Book</button>
+      </div>
+    </div>
+  </div>
+  <div class="stats-strip">
+    <div class="stats-row">
+      <div class="stat-cell"><div class="stat-ico blue"><i class="fas fa-book"></i></div><div><div class="stat-n" id="stat-books">0</div><div class="stat-l">Books Available</div></div></div>
+      <div class="stat-cell"><div class="stat-ico green"><i class="fas fa-users"></i></div><div><div class="stat-n" id="stat-visits">0</div><div class="stat-l">Today's Visitors</div></div></div>
+      <div class="stat-cell"><div class="stat-ico yellow"><i class="fas fa-bookmark"></i></div><div><div class="stat-n" id="stat-borrowed">0</div><div class="stat-l">Active Borrows</div></div></div>
+      <div class="stat-cell"><div class="stat-ico red"><i class="fas fa-exclamation-triangle"></i></div><div><div class="stat-n" id="stat-overdue">0</div><div class="stat-l">Overdue</div></div></div>
+    </div>
+  </div>
+  <div class="feat-section">
+    <div class="feat-title">System Features</div>
+    <div class="feat-sub">Everything you need to manage the STI Naga Library.</div>
+    <div class="feat-grid">
+      <div class="feat-card" onclick="showPage('logbook')"><div class="feat-ico"><i class="fas fa-user-check"></i></div><h3>Quick Time In / Out</h3><p>Search your name, click it, select purpose and tap - done in seconds.</p></div>
+      <div class="feat-card" onclick="showPage('borrow')"> <div class="feat-ico"><i class="fas fa-book-open"></i></div><h3>Easy Book Borrowing</h3><p>Just type any book title - no catalogue browsing needed.</p></div>
+      <div class="feat-card" onclick="showPage('return')"> <div class="feat-ico"><i class="fas fa-calculator"></i></div><h3>Late Fee Calculator</h3><p>Automatic &#8369;10/day penalty for counted overdue days.</p></div>
+      <div class="feat-card" onclick="openAdminLogin()">   <div class="feat-ico"><i class="fas fa-chart-bar"></i></div><h3>Reports & History</h3><p>Daily visitor logs, borrow summaries and overdue reports.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGBOOK -->
+<div class="page" id="page-logbook">
+  <div class="pg-banner">
+    <div class="pg-banner-in">
+      <div class="pg-icon"><i class="fas fa-clipboard-list"></i></div>
+      <div><h2>Library Logbook</h2><p>Search your name or ID to auto-fill, then tap Time In.</p></div>
+    </div>
+  </div>
+  <div class="pg-body">
+
+    <!-- Clock -->
+    <div class="clock-bar">
+      <div class="clock-date"><i class="fas fa-calendar-alt"></i> <span id="clock-date"></span></div>
+      <div class="clock-time" id="clock-time"></div>
+    </div>
+
+    <!-- TIME IN PANEL -->
+    <div id="panel-in">
+      <div class="card">
+        <div class="card-head">
+          <h3><i class="fas fa-sign-in-alt"></i> Log Time In</h3>
+          <span class="badge badge-blue"><i class="fas fa-calendar"></i> <span id="logbook-date"></span></span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="flabel">Search Student (Name or ID)</label>
+            <div class="ac-wrap">
+              <div class="ac-row"><i class="fas fa-search ac-icon"></i><input class="finput ac-input" id="in-search" placeholder="Type name or ID to find student..." oninput="searchForTimeIn(this.value)" autocomplete="off"></div>
+              <div class="ac-drop" id="in-drop"></div>
+            </div>
+            <div class="form-hint">Click a name to auto-fill. First-time visitors can fill manually.</div>
+          </div>
+          <div class="sep-label">Student Details</div>
+          <div class="frow">
+            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="in-id"     placeholder="e.g. 02000123456"></div>
+            <div class="form-group"><label class="flabel">Full Name *</label>  <input class="finput" id="in-name"   placeholder="Juan Dela Cruz"></div>
+          </div>
+          <div class="frow">
+            <div class="form-group">
+              <label class="flabel">Course</label>
+              <select class="fselect" id="in-course">
+                <option value="">Select course</option>
+                <option value="BSIT">BSIT</option>
+                <option value="BSHM">BSHM</option>
+                <option value="STEM">STEM</option>
+                <option value="HUMSS">HUMSS</option>
+                <option value="ABM">ABM</option>
+                <option value="MAWD">MAWD</option>
+                <option value="JHS">JHS</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="flabel">Section</label> <input class="finput" id="in-section" placeholder="1A, 2B..."></div>
+          </div>
+          <button class="btn btn-primary btn-full btn-lg" onclick="doTimeIn()"><i class="fas fa-sign-in-alt"></i> Log Time In Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Log Table -->
+    <div class="tbl-wrap" style="margin-top:20px;">
+      <div class="tbl-bar">
+        <h3><i class="fas fa-list"></i> Today's Entries</h3>
+        <input class="tsearch" placeholder="Search..." oninput="filterLog(this.value)">
+      </div>
+      <div class="tbl-scroll">
+        <table><thead><tr><th>Student ID</th><th>Name</th><th>Course/Sec</th><th>Time In</th></tr></thead>
+        <tbody id="tb-log-today"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BORROW -->
+<div class="page" id="page-borrow">
+  <div class="pg-banner"><div class="pg-banner-in"><div class="pg-icon"><i class="fas fa-book"></i></div><div><h2>Borrow a Book</h2><p>Search the acquisition number and enter your details - simple and fast.</p></div></div></div>
+  <div class="pg-body">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-head"><h3><i class="fas fa-handshake"></i> Borrow Form</h3></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="flabel">Search Student (Name or ID)</label>
+              <div class="ac-wrap">
+                <div class="ac-row"><i class="fas fa-search ac-icon"></i><input class="finput ac-input" id="bor-search" placeholder="Type to find student..." oninput="searchForBorrow(this.value)" autocomplete="off"></div>
+                <div class="ac-drop" id="bor-drop"></div>
+              </div>
+            </div>
+            <div class="frow">
+              <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="bor-sid"   placeholder="02000123456"></div>
+              <div class="form-group"><label class="flabel">Student Name *</label><input class="finput" id="bor-name" placeholder="Full name"></div>
+            </div>
+            <div class="sep-label">Book Details</div>
+            <div class="form-group">
+              <label class="flabel">Acquisition Number *</label>
+              <input class="finput" id="bor-acq" placeholder="Search the number on the back of the book..." oninput="checkBookAvail(this.value)">
+              <div id="avail-box"></div>
+            </div>
+            <div class="frow">
+              <div class="form-group"><label class="flabel">Book Title</label><input class="finput" id="bor-title" placeholder="Auto-filled from acquisition number" readonly></div>
+              <div class="form-group"><label class="flabel">Author</label><input class="finput" id="bor-author" placeholder="Auto-filled" readonly></div>
+            </div>
+            <div class="frow">
+              <div class="form-group"><label class="flabel">Borrow Date & Time</label><input class="finput" id="bor-date" type="text" readonly></div>
+            </div>
+            <div class="form-group"><label class="flabel">Return Date *</label><input class="finput" id="bor-return" type="date"><div class="form-hint">Default: 2 counted days; weekends and admin closed days are skipped.</div></div>
+            <div class="hdiv"></div>
+            <button class="btn btn-primary btn-full" onclick="doBorrow()"><i class="fas fa-check-circle"></i> Confirm Borrow</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="tbl-wrap">
+          <div class="tbl-bar"><h3><i class="fas fa-book"></i> List of Materials</h3><div class="table-tools"><select class="fselect tselect" id="borrow-type-filter" onchange="filterBorrowBooks()"><option value="">All Types</option><option value="Book">Book</option><option value="Thesis/Capstone Project">Thesis/Capstone Project</option><option value="Research Papers">Research Papers</option></select><input class="tsearch" id="borrow-book-search" placeholder="Search..." oninput="filterBorrowBooks(this.value)"></div></div>
+          <div class="tbl-scroll"><table><thead><tr><th>Acq. No.</th><th>Type</th><th>Title</th><th>Author</th><th>Status</th><th></th></tr></thead><tbody id="tb-borrow-books"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RETURN -->
+<div class="page" id="page-return">
+  <div class="pg-banner"><div class="pg-banner-in"><div class="pg-icon"><i class="fas fa-undo"></i></div><div><h2>Return a Book</h2><p>Process book returns and calculate late fees automatically.</p></div></div></div>
+  <div class="pg-body">
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-head"><h3><i class="fas fa-undo"></i> Return Form</h3></div>
+          <div class="card-body">
+            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ret-sid" placeholder="02000123456" oninput="lookupStudentBorrows(this.value)"></div>
+            <div class="form-group"><label class="flabel">Select Book to Return *</label><select class="fselect" id="ret-book" onchange="calcLateFee()"><option value="">- Enter Student ID first -</option></select></div>
+            <div class="form-group"><label class="flabel">Return Date</label><input class="finput" id="ret-date" type="text" readonly><div class="form-hint">Fixed to today's date.</div></div>
+            <div id="fee-box"></div>
+            <div class="hdiv"></div>
+            <button class="btn btn-success btn-full" onclick="doReturn()"><i class="fas fa-check-circle"></i> Confirm Return</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="tbl-wrap">
+          <div class="tbl-bar"><h3><i class="fas fa-history"></i> Return History</h3></div>
+          <div class="tbl-scroll"><table><thead><tr><th>Student</th><th>Book</th><th>Due</th><th>Returned</th><th>Fee</th></tr></thead><tbody id="tb-returns"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="modal-book">
+  <div class="modal">
+    <div class="modal-head"><h3 id="book-modal-title">Add New Book</h3><button class="modal-x" onclick="closeOverlay('modal-book')"><i class="fas fa-times"></i></button></div>
+    <input type="hidden" id="edit-book-id">
+    <div class="frow"><div class="form-group"><label class="flabel">Acquisition No.</label><input class="finput" id="mb-acq" placeholder="Auto-generated if blank"></div><div class="form-group"><label class="flabel">Date Acquired</label><input class="finput" id="mb-acquired" type="date"></div></div>
+    <div class="form-group">
+      <label class="flabel">Type of Material</label>
+      <select class="fselect" id="mb-material">
+        <option value="Book">Book</option>
+        <option value="Thesis/Capstone Project">Thesis/Capstone Project</option>
+        <option value="Research Papers">Research Papers</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="flabel">Author/Editor</label><input class="finput" id="mb-author" placeholder="Author or editor"></div>
+    <div class="frow"><div class="form-group"><label class="flabel">Title</label><input class="finput" id="mb-title" placeholder="Untitled if blank"></div><div class="form-group"><label class="flabel">Published Year</label><input class="finput" id="mb-year" type="number" min="1000" max="9999" placeholder="e.g. 2024"></div></div>
+    <div class="modal-foot"><button class="btn btn-ghost btn-sm" onclick="closeOverlay('modal-book')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveBook()"><i class="fas fa-save"></i> Save</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-student">
+  <div class="modal">
+    <div class="modal-head"><h3 id="student-modal-title">Add Student</h3><button class="modal-x" onclick="closeOverlay('modal-student')"><i class="fas fa-times"></i></button></div>
+    <input type="hidden" id="edit-student-id">
+    <div class="frow"><div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ms-id" placeholder="2024-00123"></div><div class="form-group"><label class="flabel">Full Name *</label><input class="finput" id="ms-name" placeholder="Juan Dela Cruz"></div></div>
+    <div class="frow">
+      <div class="form-group">
+        <label class="flabel">Course *</label>
+        <select class="fselect" id="ms-course">
+          <option value="">Select course</option>
+          <option value="BSIT">BSIT</option>
+          <option value="BSHM">BSHM</option>
+          <option value="STEM">STEM</option>
+          <option value="HUMSS">HUMSS</option>
+          <option value="ABM">ABM</option>
+          <option value="MAWD">MAWD</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="flabel">Section</label><input class="finput" id="ms-section" placeholder="1A..."></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost btn-sm" onclick="closeOverlay('modal-student')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveStudent()"><i class="fas fa-save"></i> Save</button></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="public/js/script.js"></script>
+</body>
+</html>
+
