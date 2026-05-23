@@ -1,53 +1,13 @@
-﻿// ================================================================
+// ================================================================
 //  STI College Naga Library System - script.js (clean rebuild)
 // ================================================================
 
-/* DATA STORE - now loaded from Express + SQLite */
-const COLLECTION_NAMES = ['books', 'students', 'borrows', 'log', 'returns', 'closed_days'];
-const syncTimers = {};
-
+/* DATA STORE */
 const DB = {
-  cache: Object.fromEntries(COLLECTION_NAMES.map(k => [k, []])),
-  ready: false,
-  get: k => DB.cache[k] || [],
-  set: (k, v) => {
-    DB.cache[k] = Array.isArray(v) ? v : [];
-    if (DB.ready && COLLECTION_NAMES.includes(k)) queueSync(k);
-  },
+  get: k       => JSON.parse(localStorage.getItem('sti_' + k) || '[]'),
+  set: (k, v)  => localStorage.setItem('sti_' + k, JSON.stringify(v)),
 };
 
-async function apiJson(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Request failed.');
-  return data;
-}
-
-async function loadDatabase() {
-  const data = await apiJson('/api/data');
-  COLLECTION_NAMES.forEach(k => { DB.cache[k] = Array.isArray(data[k]) ? data[k] : []; });
-  DB.ready = true;
-}
-
-function queueSync(key) {
-  clearTimeout(syncTimers[key]);
-  syncTimers[key] = setTimeout(() => syncCollection(key), 120);
-}
-
-async function syncCollection(key) {
-  try {
-    await apiJson(`/api/sync/${encodeURIComponent(key)}`, {
-      method: 'POST',
-      body: JSON.stringify(DB.cache[key] || []),
-    });
-  } catch (err) {
-    console.error(err);
-    if (typeof toast === 'function') toast('Database save failed. Check if the server is running.', 'error', 'fa-database');
-  }
-}
 /* HELPERS */
 const $   = id  => document.getElementById(id);
 const val = id  => ($( id )?.value || '').trim();
@@ -582,6 +542,12 @@ function renderReturnHistory() {
 }
 
 /* ADMIN LOGIN */
+const CREDS_KEY = 'sti_admin_creds';
+function getCreds() {
+  const s = localStorage.getItem(CREDS_KEY);
+  return s ? JSON.parse(s) : { user:'admin', pass:'sti2024' };
+}
+
 function openAdminLogin() {
   if (sessionStorage.getItem('sti_admin') === 'yes') { enterAdmin(); return; }
   $('l-user').value = ''; $('l-pass').value = '';
@@ -590,23 +556,19 @@ function openAdminLogin() {
   setTimeout(() => $('l-user').focus(), 200);
 }
 
-async function doLogin() {
+function doLogin() {
   const user = $('l-user').value.trim();
   const pass = $('l-pass').value;
+  const c    = getCreds();
   if (!user || !pass) { showLoginErr('Enter username and password.'); return; }
-
-  try {
-    await apiJson('/api/login', {
-      method: 'POST',
-      body: JSON.stringify({ user, pass }),
-    });
+  if (user === c.user && pass === c.pass) {
     closeOverlay('modal-login');
     sessionStorage.setItem('sti_admin', 'yes');
     sessionStorage.setItem('sti_admin_user', user);
     enterAdmin();
     toast(`Welcome, ${user}!`, 'success', 'fa-shield-alt');
-  } catch (err) {
-    showLoginErr(err.message || 'Incorrect username or password.');
+  } else {
+    showLoginErr('Incorrect username or password.');
     $('l-pass').value = '';
     const modal = document.querySelector('#modal-login .modal');
     modal.style.animation = 'none';
@@ -614,6 +576,7 @@ async function doLogin() {
     modal.style.animation = 'shake .4s ease';
   }
 }
+
 function showLoginErr(msg) {
   $('login-err-msg').textContent = msg;
   $('login-err').classList.remove('hidden');
@@ -648,24 +611,18 @@ function adminLogout() {
   toast('Logged out.', 'info', 'fa-sign-out-alt');
 }
 
-async function changePassword() {
+function changePassword() {
   const cur = $('cp-cur').value;
   const nw  = $('cp-new').value;
   const con = $('cp-con').value;
+  const c   = getCreds();
   if (!cur || !nw || !con)    { toast('Fill in all password fields.', 'error', 'fa-exclamation-circle'); return; }
+  if (cur !== c.pass)         { toast('Current password is incorrect.', 'error', 'fa-times-circle'); return; }
   if (nw.length < 6)          { toast('New password must be at least 6 characters.', 'error', 'fa-exclamation-circle'); return; }
   if (nw !== con)             { toast('New passwords do not match.', 'error', 'fa-times-circle'); return; }
-
-  try {
-    await apiJson('/api/change-password', {
-      method: 'POST',
-      body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
-    });
-    ['cp-cur','cp-new','cp-con'].forEach(id => $(id).value = '');
-    toast('Password updated in SQLite!', 'success', 'fa-key');
-  } catch (err) {
-    toast(err.message || 'Password update failed.', 'error', 'fa-times-circle');
-  }
+  localStorage.setItem(CREDS_KEY, JSON.stringify({ user: c.user, pass: nw }));
+  ['cp-cur','cp-new','cp-con'].forEach(id => $(id).value = '');
+  toast('Password updated!', 'success', 'fa-key');
 }
 
 /* ADMIN PANELS */
@@ -954,23 +911,15 @@ shakeCSS.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%{tra
 document.head.appendChild(shakeCSS);
 
 /* INIT */
-async function initApp() {
-  try {
-    await loadDatabase();
-    ensureBookAcqNumbers();
-    ensureBorrowAcqNumbers();
-    updateStats();
-    refreshDateBadge();
-    setDefaultDates();
-    startClock();
+seedData();
+ensureBookAcqNumbers();
+ensureBorrowAcqNumbers();
+updateStats();
+refreshDateBadge();
+setDefaultDates();
+startClock();
 
-    if (sessionStorage.getItem('sti_admin') === 'yes') {
-      setTimeout(enterAdmin, 100);
-    }
-  } catch (err) {
-    console.error(err);
-    document.body.insertAdjacentHTML('afterbegin', `<div style="background:#fef2f2;color:#991b1b;padding:12px 18px;border-bottom:1px solid #fecaca;font-family:Inter,sans-serif">Cannot connect to the backend. In VS Code terminal, run <b>npm start</b>, then open <b>http://localhost:3000</b>.</div>`);
-  }
+// Restore admin session on reload
+if (sessionStorage.getItem('sti_admin') === 'yes') {
+  window.addEventListener('DOMContentLoaded', () => setTimeout(enterAdmin, 100));
 }
-
-initApp();
