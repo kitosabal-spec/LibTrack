@@ -67,7 +67,6 @@
     </div>
     <button class="btn btn-primary btn-full btn-lg" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
     <button class="btn btn-ghost btn-full" onclick="closeOverlay('modal-login')" style="margin-top:8px;">Cancel</button>
-    <div class="login-hint"><i class="fas fa-info-circle"></i> Default: <b>admin</b> / <b>sti2024</b></div>
   </div>
 </div>
 
@@ -337,24 +336,16 @@
 <div class="page" id="page-return">
   <div class="pg-banner"><div class="pg-banner-in"><div class="pg-icon"><i class="fas fa-undo"></i></div><div><h2>Return a Book</h2><p>Process book returns and calculate late fees automatically.</p></div></div></div>
   <div class="pg-body">
-    <div class="two-col">
-      <div>
-        <div class="card">
-          <div class="card-head"><h3><i class="fas fa-undo"></i> Return Form</h3></div>
-          <div class="card-body">
-            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ret-sid" placeholder="02000123456" oninput="lookupStudentBorrows(this.value)"></div>
-            <div class="form-group"><label class="flabel">Select Book to Return *</label><select class="fselect" id="ret-book" onchange="calcLateFee()"><option value="">- Enter Student ID first -</option></select></div>
-            <div class="form-group"><label class="flabel">Return Date</label><input class="finput" id="ret-date" type="text" readonly><div class="form-hint">Fixed to today's date.</div></div>
-            <div id="fee-box"></div>
-            <div class="hdiv"></div>
-            <button class="btn btn-success btn-full" onclick="doReturn()"><i class="fas fa-check-circle"></i> Confirm Return</button>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="tbl-wrap">
-          <div class="tbl-bar"><h3><i class="fas fa-history"></i> Return History</h3></div>
-          <div class="tbl-scroll"><table><thead><tr><th>Student</th><th>Book</th><th>Due</th><th>Returned</th><th>Fee</th></tr></thead><tbody id="tb-returns"></tbody></table></div>
+    <div class="return-stack">
+      <div class="card">
+        <div class="card-head"><h3><i class="fas fa-undo"></i> Return Form</h3></div>
+        <div class="card-body">
+          <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ret-sid" placeholder="02000123456" oninput="lookupStudentBorrows(this.value)"></div>
+          <div class="form-group"><label class="flabel">Select Book to Return *</label><select class="fselect" id="ret-book" onchange="calcLateFee()"><option value="">- Enter Student ID first -</option></select></div>
+          <div class="form-group"><label class="flabel">Return Date</label><input class="finput" id="ret-date" type="text" readonly><div class="form-hint">Fixed to today's date.</div></div>
+          <div id="fee-box"></div>
+          <div class="hdiv"></div>
+          <button class="btn btn-success btn-full" onclick="doReturn()"><i class="fas fa-check-circle"></i> Confirm Return</button>
         </div>
       </div>
     </div>
