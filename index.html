@@ -23,6 +23,7 @@
     <button class="nav-link"        id="nav-return"  onclick="showPage('return')"> <i class="fas fa-undo"></i><span>Return</span></button>
   </div>
   <div class="nav-right">
+    <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"><i class="fas fa-moon"></i></button>
     <button class="lock-btn" onclick="openAdminLogin()" title="Librarian Login"><i class="fas fa-lock"></i></button>
     <button class="hamburger" id="hamburger" onclick="toggleDrawer()"><i class="fas fa-bars"></i></button>
   </div>
@@ -43,6 +44,7 @@
   <button class="drawer-item"        id="dnav-borrow"  onclick="showPage('borrow');toggleDrawer()"> <i class="fas fa-book"></i> Borrow Book</button>
   <button class="drawer-item"        id="dnav-return"  onclick="showPage('return');toggleDrawer()"> <i class="fas fa-undo"></i> Return Book</button>
   <div class="drawer-sep"></div>
+  <button class="drawer-item" onclick="toggleTheme()"><i class="fas fa-moon" id="drawer-theme-icon"></i> <span id="drawer-theme-label">Dark Mode</span></button>
   <button class="drawer-item drawer-lock" onclick="openAdminLogin();toggleDrawer()"><i class="fas fa-lock"></i> Librarian Login</button>
 </div>
 
@@ -78,6 +80,7 @@
     </div>
     <div class="admin-bar-right">
       <span class="admin-user"><i class="fas fa-user-shield"></i> <span id="admin-uname">admin</span></span>
+      <button class="theme-btn" id="admin-theme-toggle" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"><i class="fas fa-moon"></i></button>
       <button class="btn btn-outline btn-sm" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
   </div>
@@ -92,6 +95,7 @@
       <button class="s-item"        id="amenu-borrow-history" onclick="showPanel('borrow-history')"><i class="fas fa-exchange-alt"></i> Borrow History</button>
       <button class="s-item"        id="amenu-reports"        onclick="showPanel('reports')">       <i class="fas fa-chart-bar"></i> Reports</button>
       <button class="s-item"        id="amenu-closed-days"    onclick="showPanel('closed-days')">   <i class="fas fa-calendar-times"></i> Closed Days</button>
+      <button class="s-item"        id="amenu-settings"       onclick="showPanel('settings')">      <i class="fas fa-cog"></i> Settings</button>
       <button class="s-item s-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </aside>
     <div class="admin-content">
@@ -132,18 +136,6 @@
           <button class="btn btn-danger"   onclick="genReport('overdue')"> <i class="fas fa-exclamation-triangle"></i> Overdue</button>
           <button class="btn btn-outline"  onclick="genReport('all')">     <i class="fas fa-file-alt"></i> Full Report</button>
         </div>
-        <!-- Change password -->
-        <div class="card" style="margin-top:20px;">
-          <div class="card-head"><h3><i class="fas fa-key"></i> Change Password</h3></div>
-          <div class="card-body">
-            <div class="frow">
-              <div class="form-group"><label class="flabel">Current Password</label><input class="finput" id="cp-cur" type="password" placeholder="Current"></div>
-              <div class="form-group"><label class="flabel">New Password</label><input class="finput" id="cp-new" type="password" placeholder="New (min 6 chars)"></div>
-              <div class="form-group"><label class="flabel">Confirm New</label><input class="finput" id="cp-con" type="password" placeholder="Confirm"></div>
-            </div>
-            <button class="btn btn-primary btn-sm" onclick="changePassword()"><i class="fas fa-save"></i> Update Password</button>
-          </div>
-        </div>
         <div id="rpt-out" style="margin-top:20px;"></div>
       </div>
       <!-- Closed Days -->
@@ -161,6 +153,29 @@
           </div>
         </div>
         <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-calendar-times"></i> Saved Non-Counted Days</h3></div><div class="tbl-scroll"><table><thead><tr><th>Date</th><th>Day</th><th>Reason</th><th>Action</th></tr></thead><tbody id="tb-closed-days"></tbody></table></div></div>
+      </div>
+      <!-- Settings -->
+      <div class="a-panel" id="apanel-settings">
+        <h2 class="ptitle">Settings</h2>
+        <div class="settings-panel">
+          <div class="card" style="margin-bottom:18px;">
+            <div class="card-head"><h3><i class="fas fa-palette"></i> Appearance</h3></div>
+            <div class="card-body">
+              <button class="btn btn-outline btn-sm" id="settings-theme-toggle" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"><i class="fas fa-moon"></i> Toggle Theme</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3><i class="fas fa-key"></i> Change Password</h3></div>
+            <div class="card-body">
+              <div class="frow">
+                <div class="form-group"><label class="flabel">Current Password</label><input class="finput" id="cp-cur" type="password" placeholder="Current"></div>
+                <div class="form-group"><label class="flabel">New Password</label><input class="finput" id="cp-new" type="password" placeholder="New (min 6 chars)"></div>
+                <div class="form-group"><label class="flabel">Confirm New</label><input class="finput" id="cp-con" type="password" placeholder="Confirm"></div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="changePassword()"><i class="fas fa-save"></i> Update Password</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -277,46 +292,42 @@
 <div class="page" id="page-borrow">
   <div class="pg-banner"><div class="pg-banner-in"><div class="pg-icon"><i class="fas fa-book"></i></div><div><h2>Borrow a Book</h2><p>Search the acquisition number and enter your details - simple and fast.</p></div></div></div>
   <div class="pg-body">
-    <div class="two-col">
-      <div>
-        <div class="card">
-          <div class="card-head"><h3><i class="fas fa-handshake"></i> Borrow Form</h3></div>
-          <div class="card-body">
-            <div class="form-group">
-              <label class="flabel">Search Student (Name or ID)</label>
-              <div class="ac-wrap">
-                <div class="ac-row"><i class="fas fa-search ac-icon"></i><input class="finput ac-input" id="bor-search" placeholder="Type to find student..." oninput="searchForBorrow(this.value)" autocomplete="off"></div>
-                <div class="ac-drop" id="bor-drop"></div>
-              </div>
+    <div class="borrow-stack">
+      <div class="card">
+        <div class="card-head"><h3><i class="fas fa-handshake"></i> Borrow Form</h3></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="flabel">Search Student (Name or ID)</label>
+            <div class="ac-wrap">
+              <div class="ac-row"><i class="fas fa-search ac-icon"></i><input class="finput ac-input" id="bor-search" placeholder="Type to find student..." oninput="searchForBorrow(this.value)" autocomplete="off"></div>
+              <div class="ac-drop" id="bor-drop"></div>
             </div>
-            <div class="frow">
-              <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="bor-sid"   placeholder="02000123456"></div>
-              <div class="form-group"><label class="flabel">Student Name *</label><input class="finput" id="bor-name" placeholder="Full name"></div>
-            </div>
-            <div class="sep-label">Book Details</div>
-            <div class="form-group">
-              <label class="flabel">Acquisition Number *</label>
-              <input class="finput" id="bor-acq" placeholder="Search the number on the back of the book..." oninput="checkBookAvail(this.value)">
-              <div id="avail-box"></div>
-            </div>
-            <div class="frow">
-              <div class="form-group"><label class="flabel">Book Title</label><input class="finput" id="bor-title" placeholder="Auto-filled from acquisition number" readonly></div>
-              <div class="form-group"><label class="flabel">Author</label><input class="finput" id="bor-author" placeholder="Auto-filled" readonly></div>
-            </div>
-            <div class="frow">
-              <div class="form-group"><label class="flabel">Borrow Date & Time</label><input class="finput" id="bor-date" type="text" readonly></div>
-            </div>
-            <div class="form-group"><label class="flabel">Return Date *</label><input class="finput" id="bor-return" type="date"><div class="form-hint">Default: 2 counted days; weekends and admin closed days are skipped.</div></div>
-            <div class="hdiv"></div>
-            <button class="btn btn-primary btn-full" onclick="doBorrow()"><i class="fas fa-check-circle"></i> Confirm Borrow</button>
           </div>
+          <div class="frow">
+            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="bor-sid"   placeholder="02000123456"></div>
+            <div class="form-group"><label class="flabel">Student Name *</label><input class="finput" id="bor-name" placeholder="Full name"></div>
+          </div>
+          <div class="sep-label">Book Details</div>
+          <div class="form-group">
+            <label class="flabel">Acquisition Number *</label>
+            <input class="finput" id="bor-acq" placeholder="Search the number on the back of the book..." oninput="checkBookAvail(this.value)">
+            <div id="avail-box"></div>
+          </div>
+          <div class="frow">
+            <div class="form-group"><label class="flabel">Book Title</label><input class="finput" id="bor-title" placeholder="Auto-filled from acquisition number" readonly></div>
+            <div class="form-group"><label class="flabel">Author</label><input class="finput" id="bor-author" placeholder="Auto-filled" readonly></div>
+          </div>
+          <div class="frow">
+            <div class="form-group"><label class="flabel">Borrow Date & Time</label><input class="finput" id="bor-date" type="text" readonly></div>
+          </div>
+          <div class="form-group"><label class="flabel">Return Date *</label><input class="finput" id="bor-return" type="date"><div class="form-hint">Default: 2 counted days; weekends and admin closed days are skipped.</div></div>
+          <div class="hdiv"></div>
+          <button class="btn btn-primary btn-full" onclick="doBorrow()"><i class="fas fa-check-circle"></i> Confirm Borrow</button>
         </div>
       </div>
-      <div>
-        <div class="tbl-wrap">
-          <div class="tbl-bar"><h3><i class="fas fa-book"></i> List of Materials</h3><div class="table-tools"><select class="fselect tselect" id="borrow-type-filter" onchange="filterBorrowBooks()"><option value="">All Types</option><option value="Book">Book</option><option value="Thesis/Capstone Project">Thesis/Capstone Project</option><option value="Research Papers">Research Papers</option></select><input class="tsearch" id="borrow-book-search" placeholder="Search..." oninput="filterBorrowBooks(this.value)"></div></div>
-          <div class="tbl-scroll"><table><thead><tr><th>Acq. No.</th><th>Type</th><th>Title</th><th>Author</th><th>Status</th><th></th></tr></thead><tbody id="tb-borrow-books"></tbody></table></div>
-        </div>
+      <div class="tbl-wrap">
+        <div class="tbl-bar"><h3><i class="fas fa-book"></i> List of Materials</h3><div class="table-tools"><select class="fselect tselect" id="borrow-type-filter" onchange="filterBorrowBooks()"><option value="">All Types</option><option value="Book">Book</option><option value="Thesis/Capstone Project">Thesis/Capstone Project</option><option value="Research Papers">Research Papers</option></select><input class="tsearch" id="borrow-book-search" placeholder="Search..." oninput="filterBorrowBooks(this.value)"></div></div>
+        <div class="tbl-scroll"><table><thead><tr><th>Acq. No.</th><th>Type</th><th>Title</th><th>Author</th><th>Status</th><th></th></tr></thead><tbody id="tb-borrow-books"></tbody></table></div>
       </div>
     </div>
   </div>
@@ -374,7 +385,7 @@
   <div class="modal">
     <div class="modal-head"><h3 id="student-modal-title">Add Student</h3><button class="modal-x" onclick="closeOverlay('modal-student')"><i class="fas fa-times"></i></button></div>
     <input type="hidden" id="edit-student-id">
-    <div class="frow"><div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ms-id" placeholder="2024-00123"></div><div class="form-group"><label class="flabel">Full Name *</label><input class="finput" id="ms-name" placeholder="Juan Dela Cruz"></div></div>
+    <div class="frow"><div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ms-id" placeholder="02000123456"></div><div class="form-group"><label class="flabel">Full Name *</label><input class="finput" id="ms-name" placeholder="Juan Dela Cruz"></div></div>
     <div class="frow">
       <div class="form-group">
         <label class="flabel">Course *</label>

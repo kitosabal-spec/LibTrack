@@ -273,7 +273,7 @@ app.post('/api/change-password', async (req, res, next) => {
     const { currentPassword, newPassword } = req.body;
     const adminPass = await get('SELECT value FROM settings WHERE key = ?', ['admin_pass']);
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Missing password.' });
-    if (currentPassword !== adminPass.value) return res.status(401).json({ error: 'Current password is incorrect.' });
+    if (currentPassword !== adminPass?.value) return res.status(401).json({ error: 'Current password is incorrect.' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
     await run('UPDATE settings SET value = ? WHERE key = ?', [newPassword, 'admin_pass']);
     res.json({ ok: true });
@@ -302,4 +302,3 @@ initDatabase()
     console.error('Database startup failed:', err);
     throw err;
   });
-

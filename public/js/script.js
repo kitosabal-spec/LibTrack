@@ -59,6 +59,7 @@ const borrowStamp = b => [b.bdate, b.btime].filter(Boolean).join(' ');
 const normalizeAcq = s => String(s || '').trim().toUpperCase();
 const acqLabel = b => b.acqNo || b.id || '-';
 const findBookByAcq = acq => DB.get('books').find(b => normalizeAcq(b.acqNo) === normalizeAcq(acq));
+const findStudentBySid = sid => DB.get('students').find(s => String(s.sid || '').toLowerCase() === String(sid || '').trim().toLowerCase());
 const nextAcqNo = books => {
   let n = 1;
   const used = new Set(books.map(b => normalizeAcq(b.acqNo)));
@@ -101,6 +102,46 @@ const countCountedDaysBetween = (from, to) => {
 const lateDays = (due, returned = today()) => countCountedDaysBetween(due, returned);
 const lateFee = days => days * LATE_FEE_PER_DAY;
 const isOverdue = d => lateDays(d) > 0;
+
+/* THEME */
+const THEME_KEY = 'sti_libtrack_theme';
+
+function preferredTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === 'dark' || saved === 'light') return saved;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function setTheme(theme) {
+  const next = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem(THEME_KEY, next);
+  updateThemeButtons(next);
+}
+
+function updateThemeButtons(theme) {
+  const isDark = theme === 'dark';
+  ['theme-toggle', 'admin-theme-toggle', 'settings-theme-toggle'].forEach(id => {
+    const toggle = $(id);
+    const icon = toggle?.querySelector('i');
+    if (!toggle || !icon) return;
+    icon.className = `fas ${isDark ? 'fa-sun' : 'fa-moon'}`;
+    toggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    toggle.setAttribute('aria-label', toggle.title);
+  });
+  if ($('drawer-theme-icon')) $('drawer-theme-icon').className = `fas ${isDark ? 'fa-sun' : 'fa-moon'}`;
+  if ($('drawer-theme-label')) $('drawer-theme-label').textContent = isDark ? 'Light Mode' : 'Dark Mode';
+}
+
+function initTheme() {
+  setTheme(preferredTheme());
+}
+
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  setTheme(next);
+  toast(`${next === 'dark' ? 'Dark' : 'Light'} mode enabled.`, 'info', next === 'dark' ? 'fa-moon' : 'fa-sun');
+}
 
 /* SEED DATA */
 function seedData() {
@@ -212,10 +253,10 @@ function updateStats() {
   const log   = DB.get('log');
   const bors  = DB.get('borrows');
   const t     = today();
-  $('stat-books').textContent    = books.reduce((s,b) => s + Math.max(0, b.copies - (b.borrowed||0)), 0);
-  $('stat-visits').textContent   = log.filter(l => l.date === t).length;
-  $('stat-borrowed').textContent = bors.filter(b => !b.ret).length;
-  $('stat-overdue').textContent  = bors.filter(b => !b.ret && isOverdue(b.due)).length;
+  if ($('stat-books')) $('stat-books').textContent = books.reduce((s,b) => s + Math.max(0, b.copies - (b.borrowed||0)), 0);
+  if ($('stat-visits')) $('stat-visits').textContent = log.filter(l => l.date === t).length;
+  if ($('stat-borrowed')) $('stat-borrowed').textContent = bors.filter(b => !b.ret).length;
+  if ($('stat-overdue')) $('stat-overdue').textContent = bors.filter(b => !b.ret && isOverdue(b.due)).length;
 }
 
 /* CLOCK */
@@ -234,6 +275,7 @@ function startClock() {
 
 /* PAGE NAV */
 function showPage(id) {
+  document.body.classList.remove('admin-mode');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.drawer-item').forEach(n => n.classList.remove('active'));
@@ -309,26 +351,28 @@ function pickStudentForIn(sid, name, course, sec) {
 /* Do Time In */
 function doTimeIn() {
   const sid     = val('in-id');
-  const name    = val('in-name');
 
-  if (!sid || !name) {
-    toast('Please fill in Student ID and Full Name.', 'error', 'fa-exclamation-circle');
+  if (!sid) {
+    toast('Please select a registered student.', 'error', 'fa-exclamation-circle');
+    return;
+  }
+
+  const student = findStudentBySid(sid);
+  if (!student) {
+    toast('Student is not registered. Ask the librarian to add the student first.', 'error', 'fa-user-lock');
     return;
   }
 
   const log   = DB.get('log');
   const t     = today();
   if (log.find(l => l.sid === sid && l.date === t)) {
-    toast(`${name} is already logged today.`, 'error', 'fa-exclamation-circle');
+    toast(`${student.name} is already logged today.`, 'error', 'fa-exclamation-circle');
     return;
   }
 
   const tin = nowTime();
-  log.unshift({ id: 'L' + Date.now(), sid, name, course: val('in-course'), sec: val('in-section'), tin, date: t });
+  log.unshift({ id: 'L' + Date.now(), sid: student.sid, name: student.name, course: student.course || '', sec: student.sec || '', tin, date: t });
   DB.set('log', log);
-
-  // Auto-register student if new
-  autoRegister(sid, name, val('in-course'), val('in-section'));
 
   // Clear form
   ['in-id','in-name','in-course','in-section'].forEach(id => $(id).value = '');
@@ -337,7 +381,7 @@ function doTimeIn() {
   renderLogToday();
   updateStats();
 
-  toast(`${name} - Time In at ${tin}`, 'success', 'fa-sign-in-alt');
+  toast(`${student.name} - Time In at ${tin}`, 'success', 'fa-sign-in-alt');
 }
 
 /* Render today's log table */
@@ -363,14 +407,6 @@ function renderLogToday(filter = '') {
   ).join('');
 }
 function filterLog(v) { renderLogToday(v); }
-
-function autoRegister(sid, name, course, sec) {
-  const students = DB.get('students');
-  if (!students.find(s => s.sid === sid)) {
-    students.push({ id:'S'+Date.now(), sid, name, course: course||'', sec: sec||'' });
-    DB.set('students', students);
-  }
-}
 
 /* BORROW */
 
@@ -431,14 +467,19 @@ function setDefaultDates() {
 
 function doBorrow() {
   const sid    = val('bor-sid');
-  const sname  = val('bor-name');
   const acqNo  = normalizeAcq(val('bor-acq'));
   const due    = val('bor-return');
   const bdate  = today();
   const btime  = nowTime();
 
-  if (!sid || !sname || !acqNo || !due) {
-    toast('Fill in Student ID, Name, Acquisition Number and Return Date.', 'error', 'fa-exclamation-circle');
+  if (!sid || !acqNo || !due) {
+    toast('Fill in Student ID, Acquisition Number and Return Date.', 'error', 'fa-exclamation-circle');
+    return;
+  }
+
+  const student = findStudentBySid(sid);
+  if (!student) {
+    toast('Student is not registered. Ask the librarian to add the student first.', 'error', 'fa-user-lock');
     return;
   }
 
@@ -464,18 +505,19 @@ function doBorrow() {
     return;
   }
 
-  bors.unshift({ id:'BR'+Date.now(), sid, sname, acqNo: book.acqNo, title: book.title, author: book.author, bdate, btime, due, ret:null, fee:0 });
+  if (!confirm(`Confirm borrow?\n\nStudent: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nDue date: ${due}`)) return;
+
+  bors.unshift({ id:'BR'+Date.now(), sid: student.sid, sname: student.name, acqNo: book.acqNo, title: book.title, author: book.author, bdate, btime, due, ret:null, fee:0 });
   DB.set('borrows', bors);
   if (book) { book.borrowed = (book.borrowed||0) + 1; DB.set('books', books); }
 
-  autoRegister(sid, sname, '', '');
   ['bor-sid','bor-name','bor-acq','bor-title','bor-author'].forEach(id => $(id).value = '');
   $('bor-search').value  = '';
   $('avail-box').innerHTML = '';
   setDefaultDates();
   renderBorrowBookList();
   updateStats();
-  toast(`${book.acqNo} - "${book.title}" borrowed by ${sname}!`, 'success', 'fa-check-circle');
+  toast(`${book.acqNo} - "${book.title}" borrowed by ${student.name}!`, 'success', 'fa-check-circle');
 }
 
 function renderBorrowBookList(filter = '') {
@@ -551,6 +593,8 @@ function doReturn() {
   if (!rec) return;
   const days = lateDays(rec.due, rd);
   const fee  = lateFee(days);
+  if (!confirm(`Confirm return?\n\nStudent: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nLate fee: PHP ${fee}`)) return;
+
   rec.ret = rd; rec.fee = fee;
   DB.set('borrows', bors);
   const books = DB.get('books');
@@ -571,6 +615,7 @@ function doReturn() {
 
 function renderReturnHistory() {
   const tbody = $('tb-returns');
+  if (!tbody) return;
   const rets  = DB.get('returns');
   if (!rets.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><i class="fas fa-history"></i><span>No returns yet.</span></div></td></tr>`; return; }
   tbody.innerHTML = rets.map(r => `
@@ -594,6 +639,7 @@ async function doLogin() {
   const user = $('l-user').value.trim();
   const pass = $('l-pass').value;
   if (!user || !pass) { showLoginErr('Enter username and password.'); return; }
+  if (!confirm(`Log in as ${user}?`)) return;
 
   try {
     await apiJson('/api/login', {
@@ -627,6 +673,7 @@ function toggleEye() {
 }
 
 function enterAdmin() {
+  document.body.classList.add('admin-mode');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
   const shell = $('admin-shell');
@@ -641,6 +688,7 @@ function adminLogout() {
   if (!confirm('Log out of Admin Dashboard?')) return;
   sessionStorage.removeItem('sti_admin');
   sessionStorage.removeItem('sti_admin_user');
+  document.body.classList.remove('admin-mode');
   const shell = $('admin-shell');
   shell.classList.remove('visible');
   shell.classList.add('hidden');
@@ -655,6 +703,7 @@ async function changePassword() {
   if (!cur || !nw || !con)    { toast('Fill in all password fields.', 'error', 'fa-exclamation-circle'); return; }
   if (nw.length < 6)          { toast('New password must be at least 6 characters.', 'error', 'fa-exclamation-circle'); return; }
   if (nw !== con)             { toast('New passwords do not match.', 'error', 'fa-times-circle'); return; }
+  if (!confirm('Are you sure you want to change the admin password?')) return;
 
   try {
     await apiJson('/api/change-password', {
@@ -662,7 +711,7 @@ async function changePassword() {
       body: JSON.stringify({ currentPassword: cur, newPassword: nw }),
     });
     ['cp-cur','cp-new','cp-con'].forEach(id => $(id).value = '');
-    toast('Password updated in SQLite!', 'success', 'fa-key');
+    toast('Admin password updated.', 'success', 'fa-key');
   } catch (err) {
     toast(err.message || 'Password update failed.', 'error', 'fa-times-circle');
   }
@@ -750,6 +799,7 @@ function openAddBook() {
 }
 function openEditBook(id) {
   const b = DB.get('books').find(x => x.id === id); if (!b) return;
+  if (!confirm(`Edit "${b.title}"?`)) return;
   $('book-modal-title').textContent = 'Edit Book';
   $('edit-book-id').value = id;
   $('mb-acq').value    = acqLabel(b);
@@ -787,7 +837,8 @@ function saveBook() {
   DB.set('books', books); closeOverlay('modal-book'); renderAdminBooks(); updateStats();
 }
 function deleteBook(id) {
-  if (!confirm('Delete this book?')) return;
+  const book = DB.get('books').find(b => b.id === id);
+  if (!confirm(`Delete ${book ? `"${book.title}"` : 'this book'}?`)) return;
   DB.set('books', DB.get('books').filter(b => b.id !== id));
   renderAdminBooks(); updateStats(); toast('Book removed.', 'info', 'fa-trash');
 }
@@ -815,6 +866,7 @@ function openAddStudent() {
 }
 function openEditStudent(id) {
   const s = DB.get('students').find(x => x.id === id); if (!s) return;
+  if (!confirm(`Edit ${s.name}?`)) return;
   $('student-modal-title').textContent = 'Edit Student';
   $('edit-student-id').value = id;
   $('ms-id').value      = s.sid;
@@ -839,7 +891,8 @@ function saveStudent() {
   DB.set('students', ss); closeOverlay('modal-student'); renderAdminStudents();
 }
 function deleteStudent(id) {
-  if (!confirm('Remove this student?')) return;
+  const student = DB.get('students').find(s => s.id === id);
+  if (!confirm(`Remove ${student ? student.name : 'this student'}?`)) return;
   DB.set('students', DB.get('students').filter(s => s.id !== id));
   renderAdminStudents(); toast('Student removed.', 'info', 'fa-trash');
 }
@@ -909,6 +962,8 @@ function addClosedDay() {
 }
 
 function deleteClosedDay(id) {
+  const day = closedDays().find(d => d.id === id);
+  if (!confirm(`Delete ${day ? day.date : 'this closed day'}?`)) return;
   DB.set('closed_days', closedDays().filter(d => d.id !== id));
   renderClosedDays();
   renderBorrowBookList();
@@ -955,6 +1010,7 @@ document.head.appendChild(shakeCSS);
 
 /* INIT */
 async function initApp() {
+  initTheme();
   try {
     await loadDatabase();
     ensureBookAcqNumbers();
