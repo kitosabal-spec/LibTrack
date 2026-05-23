@@ -22,6 +22,10 @@
   --amber-bg:       #fffbeb;
   --amber-bdr:      #fde68a;
 
+  --brown:          #8b5e34;
+  --brown-bg:       #f7efe7;
+  --brown-bdr:      #e2c7aa;
+
   --g50:            #f9fafb;
   --g100:           #f3f4f6;
   --g200:           #e5e7eb;
@@ -70,6 +74,10 @@ html[data-theme="dark"] {
   --amber:          #fbbf24;
   --amber-bg:       #451a03;
   --amber-bdr:      #92400e;
+
+  --brown:          #d6a15d;
+  --brown-bg:       #3b2414;
+  --brown-bdr:      #7c4a21;
 
   --g50:            #0b1120;
   --g100:           #111827;
@@ -1071,6 +1079,11 @@ tbody tr:last-child td {
 .stat-ico.yellow {
   background: var(--amber-bg);
   color: var(--amber);
+}
+
+.stat-ico.brown {
+  background: var(--brown-bg);
+  color: var(--brown);
 }
 
 .stat-ico.red {

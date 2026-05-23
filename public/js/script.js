@@ -252,11 +252,12 @@ function updateStats() {
   const books = DB.get('books');
   const log   = DB.get('log');
   const bors  = DB.get('borrows');
+  const students = DB.get('students');
   const t     = today();
   if ($('stat-books')) $('stat-books').textContent = books.reduce((s,b) => s + Math.max(0, b.copies - (b.borrowed||0)), 0);
   if ($('stat-visits')) $('stat-visits').textContent = log.filter(l => l.date === t).length;
   if ($('stat-borrowed')) $('stat-borrowed').textContent = bors.filter(b => !b.ret).length;
-  if ($('stat-overdue')) $('stat-overdue').textContent = bors.filter(b => !b.ret && isOverdue(b.due)).length;
+  if ($('stat-students')) $('stat-students').textContent = students.length;
 }
 
 /* CLOCK */
@@ -639,7 +640,6 @@ async function doLogin() {
   const user = $('l-user').value.trim();
   const pass = $('l-pass').value;
   if (!user || !pass) { showLoginErr('Enter username and password.'); return; }
-  if (!confirm(`Log in as ${user}?`)) return;
 
   try {
     await apiJson('/api/login', {
