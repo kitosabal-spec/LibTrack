@@ -510,7 +510,7 @@ function hasPendingReturnRequestForBorrow(borrowId) {
   return pendingReturnRequests().some(r => r.borrowId === borrowId);
 }
 
-function doBorrow() {
+async function doBorrow() {
   const sid    = val('bor-sid');
   const acqNo  = normalizeAcq(val('bor-acq'));
   const due    = val('bor-return');
@@ -554,7 +554,7 @@ function doBorrow() {
     return;
   }
 
-  if (!confirm(`Submit borrowing request?\n\nStudent: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}\n\nThe librarian must approve this before it becomes an active borrow.`)) return;
+  if (!await appConfirm(`Submit borrowing request?\n\nStudent: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}\n\nThe librarian must approve this before it becomes an active borrow.`, { title:'Submit Borrow Request', icon:'fa-paper-plane' })) return;
 
   const reqs = DB.get('borrow_requests');
   reqs.unshift({
@@ -649,7 +649,7 @@ function calcLateFee() {
     : `<div class="fee-ok"><div class="fee-lbl"><i class="fas fa-check-circle"></i> Fee Status</div><div class="fee-big"><i class="fas fa-check"></i> No Late Fee</div><div class="fee-sub">Returned on time - thank you!</div></div>`;
 }
 
-function doReturn() {
+async function doReturn() {
   const bid = val('ret-book');
   const rd  = today();
   if ($('ret-date')) $('ret-date').value = rd;
@@ -663,7 +663,7 @@ function doReturn() {
   }
   const days = lateDays(rec.due, rd);
   const fee  = lateFee(days);
-  if (!confirm(`Submit return request?\n\nStudent: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}\n\nThe librarian must approve this before it becomes an official return.`)) return;
+  if (!await appConfirm(`Submit return request?\n\nStudent: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}\n\nThe librarian must approve this before it becomes an official return.`, { title:'Submit Return Request', icon:'fa-paper-plane' })) return;
 
   const reqs = DB.get('return_requests');
   reqs.unshift({
@@ -766,8 +766,8 @@ function enterAdmin() {
   window.scrollTo(0, 0);
 }
 
-function adminLogout() {
-  if (!confirm('Log out of Admin Dashboard?')) return;
+async function adminLogout() {
+  if (!await appConfirm('Log out of Admin Dashboard?', { title:'Log Out', icon:'fa-sign-out-alt' })) return;
   sessionStorage.removeItem('sti_admin');
   sessionStorage.removeItem('sti_admin_user');
   document.body.classList.remove('admin-mode');
@@ -785,7 +785,7 @@ async function changePassword() {
   if (!cur || !nw || !con)    { toast('Fill in all password fields.', 'error', 'fa-exclamation-circle'); return; }
   if (nw.length < 6)          { toast('New password must be at least 6 characters.', 'error', 'fa-exclamation-circle'); return; }
   if (nw !== con)             { toast('New passwords do not match.', 'error', 'fa-times-circle'); return; }
-  if (!confirm('Are you sure you want to change the admin password?')) return;
+  if (!await appConfirm('Are you sure you want to change the admin password?', { title:'Change Password', icon:'fa-key' })) return;
 
   try {
     await apiJson('/api/change-password', {
@@ -884,9 +884,9 @@ function openAddBook() {
   $('mb-acquired').value = today();
   openOverlay('modal-book');
 }
-function openEditBook(id) {
+async function openEditBook(id) {
   const b = DB.get('books').find(x => x.id === id); if (!b) return;
-  if (!confirm(`Edit "${b.title}"?`)) return;
+  if (!await appConfirm(`Edit "${b.title}"?`, { title:'Edit Acquisition', icon:'fa-edit' })) return;
   $('book-modal-title').textContent = 'Edit Book';
   $('edit-book-id').value = id;
   $('mb-acq').value    = acqLabel(b);
@@ -923,9 +923,9 @@ function saveBook() {
   }
   DB.set('books', books); closeOverlay('modal-book'); renderAdminBooks(); updateStats();
 }
-function deleteBook(id) {
+async function deleteBook(id) {
   const book = DB.get('books').find(b => b.id === id);
-  if (!confirm(`Delete ${book ? `"${book.title}"` : 'this book'}?`)) return;
+  if (!await appConfirm(`Delete ${book ? `"${book.title}"` : 'this book'}?`, { title:'Delete Acquisition', icon:'fa-trash', okText:'Delete', okClass:'btn-danger' })) return;
   DB.set('books', DB.get('books').filter(b => b.id !== id));
   renderAdminBooks(); updateStats(); toast('Book removed.', 'info', 'fa-trash');
 }
@@ -951,9 +951,9 @@ function openAddStudent() {
   ['ms-id','ms-name','ms-course','ms-section'].forEach(id => $(id).value = '');
   openOverlay('modal-student');
 }
-function openEditStudent(id) {
+async function openEditStudent(id) {
   const s = DB.get('students').find(x => x.id === id); if (!s) return;
-  if (!confirm(`Edit ${s.name}?`)) return;
+  if (!await appConfirm(`Edit ${s.name}?`, { title:'Edit Student', icon:'fa-edit' })) return;
   $('student-modal-title').textContent = 'Edit Student';
   $('edit-student-id').value = id;
   $('ms-id').value      = s.sid;
@@ -977,9 +977,9 @@ function saveStudent() {
   }
   DB.set('students', ss); closeOverlay('modal-student'); renderAdminStudents();
 }
-function deleteStudent(id) {
+async function deleteStudent(id) {
   const student = DB.get('students').find(s => s.id === id);
-  if (!confirm(`Remove ${student ? student.name : 'this student'}?`)) return;
+  if (!await appConfirm(`Remove ${student ? student.name : 'this student'}?`, { title:'Remove Student', icon:'fa-user-times', okText:'Remove', okClass:'btn-danger' })) return;
   DB.set('students', DB.get('students').filter(s => s.id !== id));
   renderAdminStudents(); toast('Student removed.', 'info', 'fa-trash');
 }
@@ -1119,7 +1119,7 @@ function saveBorrowRequestEdit() {
   toast('Borrow request updated.', 'success', 'fa-save');
 }
 
-function approveBorrowRequest(id) {
+async function approveBorrowRequest(id) {
   const reqs = DB.get('borrow_requests');
   const req = reqs.find(r => r.id === id);
   if (!req || (req.status || 'pending') !== 'pending') return;
@@ -1144,7 +1144,7 @@ function approveBorrowRequest(id) {
     toast('Cannot approve: all copies are already borrowed.', 'error', 'fa-times-circle');
     return;
   }
-  if (!confirm(`Approve borrowing request?\n\nStudent: ${req.sname}\nMaterial: ${acqLabel(req)} - ${req.title}\nDue date: ${req.due}`)) return;
+  if (!await appConfirm(`Approve borrowing request?\n\nStudent: ${req.sname}\nMaterial: ${acqLabel(req)} - ${req.title}\nDue date: ${req.due}`, { title:'Approve Borrow Request', icon:'fa-check-circle', okText:'Approve', okClass:'btn-success' })) return;
 
   const reviewedDate = today();
   const reviewedTime = nowTime();
@@ -1165,11 +1165,11 @@ function approveBorrowRequest(id) {
   toast('Borrowing request approved.', 'success', 'fa-check-circle');
 }
 
-function rejectBorrowRequest(id) {
+async function rejectBorrowRequest(id) {
   const reqs = DB.get('borrow_requests');
   const req = reqs.find(r => r.id === id);
   if (!req || (req.status || 'pending') !== 'pending') return;
-  const reason = prompt(`Reason for rejecting ${req.sname}'s request?`, 'Request rejected by librarian');
+  const reason = await appPrompt(`Reason for rejecting ${req.sname}'s request?`, 'Request rejected by librarian', { title:'Reject Borrow Request', icon:'fa-times-circle', okText:'Reject', okClass:'btn-danger' });
   if (reason === null) return;
   req.status = 'rejected';
   req.reviewedDate = today();
@@ -1222,7 +1222,7 @@ function renderReturnRequests(filter = '') {
 }
 function filterReturnRequests(v) { renderReturnRequests(v); }
 
-function approveReturnRequest(id) {
+async function approveReturnRequest(id) {
   const reqs = DB.get('return_requests');
   const req = reqs.find(r => r.id === id);
   if (!req || (req.status || 'pending') !== 'pending') return;
@@ -1236,7 +1236,7 @@ function approveReturnRequest(id) {
   const reviewedTime = nowTime();
   const days = lateDays(rec.due, reviewedDate);
   const fee = lateFee(days);
-  if (!confirm(`Approve return request?\n\nStudent: ${req.sname}\nMaterial: ${acqLabel(req)} - ${req.title}\nLate fee: PHP ${fee}`)) return;
+  if (!await appConfirm(`Approve return request?\n\nStudent: ${req.sname}\nMaterial: ${acqLabel(req)} - ${req.title}\nLate fee: PHP ${fee}`, { title:'Approve Return Request', icon:'fa-check-circle', okText:'Approve', okClass:'btn-success' })) return;
 
   rec.ret = reviewedDate;
   rec.fee = fee;
@@ -1264,11 +1264,11 @@ function approveReturnRequest(id) {
   toast(fee > 0 ? `Return approved. Late fee: PHP ${fee}.` : 'Return approved. No late fee.', fee > 0 ? 'error' : 'success', fee > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle');
 }
 
-function rejectReturnRequest(id) {
+async function rejectReturnRequest(id) {
   const reqs = DB.get('return_requests');
   const req = reqs.find(r => r.id === id);
   if (!req || (req.status || 'pending') !== 'pending') return;
-  const reason = prompt(`Reason for rejecting ${req.sname}'s return request?`, 'Return request rejected by librarian');
+  const reason = await appPrompt(`Reason for rejecting ${req.sname}'s return request?`, 'Return request rejected by librarian', { title:'Reject Return Request', icon:'fa-times-circle', okText:'Reject', okClass:'btn-danger' });
   if (reason === null) return;
   req.status = 'rejected';
   req.reviewedDate = today();
@@ -1332,9 +1332,9 @@ function addClosedDay() {
   toast('Closed day added. Future due dates and late fees will skip it.', 'success', 'fa-calendar-plus');
 }
 
-function deleteClosedDay(id) {
+async function deleteClosedDay(id) {
   const day = closedDays().find(d => d.id === id);
-  if (!confirm(`Delete ${day ? day.date : 'this closed day'}?`)) return;
+  if (!await appConfirm(`Delete ${day ? day.date : 'this closed day'}?`, { title:'Delete Closed Day', icon:'fa-calendar-times', okText:'Delete', okClass:'btn-danger' })) return;
   DB.set('closed_days', closedDays().filter(d => d.id !== id));
   renderClosedDays();
   renderBorrowBookList();
@@ -1535,6 +1535,74 @@ function exportAttendanceExcel() {
 function genReport(type) {
   const map = { daily:'attendance', borrowed:'borrowing', all:'borrowing' };
   generateReport(map[type] || type || 'borrowing');
+}
+
+function appConfirm(message, options = {}) {
+  return new Promise(resolve => {
+    const modal = $('modal-confirm');
+    const ok = $('confirm-ok');
+    const cancel = $('confirm-cancel');
+    const inputWrap = $('confirm-input-wrap');
+    const input = $('confirm-input');
+    $('confirm-title').textContent = options.title || 'Confirm Action';
+    $('confirm-message').textContent = message;
+    $('confirm-icon').innerHTML = `<i class="fas ${options.icon || 'fa-question'}"></i>`;
+    ok.textContent = options.okText || 'Confirm';
+    ok.className = `btn ${options.okClass || 'btn-primary'} btn-sm`;
+    cancel.textContent = options.cancelText || 'Cancel';
+    inputWrap.classList.add('hidden');
+    input.value = '';
+
+    const done = value => {
+      ok.onclick = null;
+      cancel.onclick = null;
+      modal.onclick = null;
+      closeOverlay('modal-confirm');
+      resolve(value);
+    };
+
+    ok.onclick = () => done(true);
+    cancel.onclick = () => done(false);
+    modal.onclick = e => { if (e.target === modal) done(false); };
+    openOverlay('modal-confirm');
+  });
+}
+
+function appPrompt(message, defaultValue = '', options = {}) {
+  return new Promise(resolve => {
+    const modal = $('modal-confirm');
+    const ok = $('confirm-ok');
+    const cancel = $('confirm-cancel');
+    const inputWrap = $('confirm-input-wrap');
+    const input = $('confirm-input');
+    $('confirm-title').textContent = options.title || 'Add Note';
+    $('confirm-message').textContent = message;
+    $('confirm-icon').innerHTML = `<i class="fas ${options.icon || 'fa-pen'}"></i>`;
+    ok.textContent = options.okText || 'Save';
+    ok.className = `btn ${options.okClass || 'btn-primary'} btn-sm`;
+    cancel.textContent = options.cancelText || 'Cancel';
+    inputWrap.classList.remove('hidden');
+    input.value = defaultValue;
+
+    const done = value => {
+      ok.onclick = null;
+      cancel.onclick = null;
+      modal.onclick = null;
+      input.onkeydown = null;
+      closeOverlay('modal-confirm');
+      resolve(value);
+    };
+
+    ok.onclick = () => done(input.value);
+    cancel.onclick = () => done(null);
+    modal.onclick = e => { if (e.target === modal) done(null); };
+    input.onkeydown = e => {
+      if (e.key === 'Enter') done(input.value);
+      if (e.key === 'Escape') done(null);
+    };
+    openOverlay('modal-confirm');
+    setTimeout(() => input.focus(), 80);
+  });
 }
 
 /* OVERLAY / MODAL */
