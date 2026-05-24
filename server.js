@@ -45,6 +45,11 @@ const tableMap = {
     columns: ['id', 'sid', 'sname', 'course', 'sec', 'acqNo', 'title', 'author', 'requestDate', 'requestTime', 'due', 'status', 'reviewedDate', 'reviewedTime', 'note'],
     numberColumns: [],
   },
+  return_requests: {
+    table: 'return_requests',
+    columns: ['id', 'borrowId', 'sid', 'sname', 'acqNo', 'title', 'author', 'bdate', 'btime', 'due', 'requestDate', 'requestTime', 'fee', 'status', 'reviewedDate', 'reviewedTime', 'note'],
+    numberColumns: ['fee'],
+  },
   log: {
     table: 'log_entries',
     columns: ['id', 'sid', 'name', 'course', 'sec', 'tin', 'date'],
@@ -125,6 +130,26 @@ async function initDatabase() {
     requestDate TEXT,
     requestTime TEXT,
     due TEXT,
+    status TEXT DEFAULT 'pending',
+    reviewedDate TEXT,
+    reviewedTime TEXT,
+    note TEXT
+  )`);
+
+  await run(`CREATE TABLE IF NOT EXISTS return_requests (
+    id TEXT PRIMARY KEY,
+    borrowId TEXT,
+    sid TEXT,
+    sname TEXT,
+    acqNo TEXT,
+    title TEXT,
+    author TEXT,
+    bdate TEXT,
+    btime TEXT,
+    due TEXT,
+    requestDate TEXT,
+    requestTime TEXT,
+    fee INTEGER DEFAULT 0,
     status TEXT DEFAULT 'pending',
     reviewedDate TEXT,
     reviewedTime TEXT,

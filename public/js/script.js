@@ -3,7 +3,7 @@
 // ================================================================
 
 /* DATA STORE - now loaded from Express + SQLite */
-const COLLECTION_NAMES = ['books', 'students', 'borrows', 'borrow_requests', 'log', 'returns', 'closed_days'];
+const COLLECTION_NAMES = ['books', 'students', 'borrows', 'borrow_requests', 'return_requests', 'log', 'returns', 'closed_days'];
 const syncTimers = {};
 
 const DB = {
@@ -258,7 +258,7 @@ function updateStats() {
   if ($('stat-visits')) $('stat-visits').textContent = log.filter(l => l.date === t).length;
   if ($('stat-borrowed')) $('stat-borrowed').textContent = bors.filter(b => !b.ret).length;
   if ($('stat-students')) $('stat-students').textContent = students.length;
-  updateBorrowRequestBadge();
+  updateRequestBadges();
 }
 
 /* CLOCK */
@@ -484,8 +484,30 @@ function updateBorrowRequestBadge() {
   badge.title = `${count} pending borrow request${count === 1 ? '' : 's'}`;
 }
 
+function pendingReturnRequests() {
+  return DB.get('return_requests').filter(r => (r.status || 'pending') === 'pending');
+}
+
+function updateReturnRequestBadge() {
+  const badge = $('return-req-count');
+  if (!badge) return;
+  const count = pendingReturnRequests().length;
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.classList.toggle('hidden', count === 0);
+  badge.title = `${count} pending return request${count === 1 ? '' : 's'}`;
+}
+
+function updateRequestBadges() {
+  updateBorrowRequestBadge();
+  updateReturnRequestBadge();
+}
+
 function hasPendingRequestForAcq(acqNo) {
   return pendingBorrowRequests().some(r => normalizeAcq(r.acqNo) === normalizeAcq(acqNo));
+}
+
+function hasPendingReturnRequestForBorrow(borrowId) {
+  return pendingReturnRequests().some(r => r.borrowId === borrowId);
 }
 
 function doBorrow() {
@@ -606,10 +628,10 @@ function pickBorrowBook(acqNo) {
 
 function lookupStudentBorrows(sid) {
   const sel  = $('ret-book');
-  const rows = DB.get('borrows').filter(b => b.sid === sid && !b.ret);
+  const rows = DB.get('borrows').filter(b => b.sid === sid && !b.ret && !hasPendingReturnRequestForBorrow(b.id));
   sel.innerHTML = rows.length
     ? '<option value="">- Select book -</option>' + rows.map(b => `<option value="${b.id}">${acqLabel(b)} - ${b.title} (Due: ${b.due})</option>`).join('')
-    : '<option value="">- No active borrows for this ID -</option>';
+    : '<option value="">- No active borrows available for return request -</option>';
   $('fee-box').innerHTML = '';
 }
 
@@ -635,18 +657,35 @@ function doReturn() {
   const bors = DB.get('borrows');
   const rec  = bors.find(b => b.id === bid);
   if (!rec) return;
+  if (hasPendingReturnRequestForBorrow(bid)) {
+    toast('This borrowed material already has a pending return request.', 'error', 'fa-undo-alt');
+    return;
+  }
   const days = lateDays(rec.due, rd);
   const fee  = lateFee(days);
-  if (!confirm(`Confirm return?\n\nStudent: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nLate fee: PHP ${fee}`)) return;
+  if (!confirm(`Submit return request?\n\nStudent: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}\n\nThe librarian must approve this before it becomes an official return.`)) return;
 
-  rec.ret = rd; rec.fee = fee;
-  DB.set('borrows', bors);
-  const books = DB.get('books');
-  const book  = books.find(b => normalizeAcq(b.acqNo) === normalizeAcq(rec.acqNo)) || books.find(b => b.title.toLowerCase() === rec.title.toLowerCase());
-  if (book && book.borrowed > 0) { book.borrowed--; DB.set('books', books); }
-  const rets = DB.get('returns');
-  rets.unshift({ ...rec });
-  DB.set('returns', rets);
+  const reqs = DB.get('return_requests');
+  reqs.unshift({
+    id:'RR'+Date.now(),
+    borrowId: rec.id,
+    sid: rec.sid,
+    sname: rec.sname,
+    acqNo: rec.acqNo,
+    title: rec.title,
+    author: rec.author,
+    bdate: rec.bdate,
+    btime: rec.btime,
+    due: rec.due,
+    requestDate: rd,
+    requestTime: nowTime(),
+    fee,
+    status:'pending',
+    reviewedDate:'',
+    reviewedTime:'',
+    note:'',
+  });
+  DB.set('return_requests', reqs);
   renderReturnHistory();
   renderBorrowBookList();
   updateStats();
@@ -654,7 +693,7 @@ function doReturn() {
   $('ret-book').innerHTML = '<option>- Enter Student ID first -</option>';
   $('ret-sid').value  = '';
   $('ret-date').value = today();
-  toast(fee > 0 ? `Book returned. Late fee: PHP ${fee}.` : 'Book returned! No late fee.', fee > 0 ? 'error' : 'success', fee > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle');
+  toast('Return request sent. Please wait for librarian approval.', 'success', 'fa-paper-plane');
 }
 
 function renderReturnHistory() {
@@ -771,6 +810,7 @@ function showPanel(id) {
   if (id === 'students')       renderAdminStudents();
   if (id === 'logbook-view')   renderAdminLog();
   if (id === 'borrow-requests') renderBorrowRequests();
+  if (id === 'return-requests') renderReturnRequests();
   if (id === 'borrow-history') renderAdminBorrows();
   if (id === 'reports')        generateReport();
   if (id === 'closed-days')    renderClosedDays();
@@ -1140,6 +1180,104 @@ function rejectBorrowRequest(id) {
   renderBorrowBookList();
   updateStats();
   toast('Borrowing request rejected.', 'info', 'fa-times-circle');
+}
+
+function renderReturnRequests(filter = '') {
+  const tbody = $('tb-return-requests');
+  if (!tbody) return;
+  let rows = DB.get('return_requests').slice().sort((a, b) => {
+    const rank = r => (r.status || 'pending') === 'pending' ? 0 : 1;
+    return rank(a) - rank(b) || `${b.requestDate} ${b.requestTime}`.localeCompare(`${a.requestDate} ${a.requestTime}`);
+  });
+  if (filter) {
+    const f = filter.toLowerCase();
+    rows = rows.filter(r =>
+      String(r.sid || '').toLowerCase().includes(f) ||
+      String(r.sname || '').toLowerCase().includes(f) ||
+      String(r.title || '').toLowerCase().includes(f) ||
+      acqLabel(r).toLowerCase().includes(f)
+    );
+  }
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><i class="fas fa-undo-alt"></i><span>No return requests.</span></div></td></tr>`;
+    updateRequestBadges();
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const pending = (r.status || 'pending') === 'pending';
+    return `<tr>
+      <td>${r.requestDate || '-'}<br><small style="color:var(--g500)">${r.requestTime || ''}</small></td>
+      <td><span class="tag">${r.sid}</span><br>${r.sname}</td>
+      <td><span class="tag">${acqLabel(r)}</span></td>
+      <td>${r.title}<br><small style="color:var(--g500)">${r.author || '-'}</small></td>
+      <td>${r.due || '-'}</td>
+      <td>${Number(r.fee || 0) > 0 ? `<span class="badge badge-red">&#8369;${r.fee}</span>` : '<span class="badge badge-green">&#8369;0</span>'}</td>
+      <td>${requestStatusBadge(r.status)}${r.note ? `<br><small style="color:var(--g500)">${r.note}</small>` : ''}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        ${pending ? `<button class="btn btn-success btn-icon" onclick="approveReturnRequest('${r.id}')" title="Confirm" aria-label="Confirm"><i class="fas fa-check"></i></button><button class="btn btn-danger btn-icon" onclick="rejectReturnRequest('${r.id}')" title="Reject" aria-label="Reject"><i class="fas fa-times"></i></button>` : '<span style="color:var(--g400);font-size:12px">Reviewed</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+  updateRequestBadges();
+}
+function filterReturnRequests(v) { renderReturnRequests(v); }
+
+function approveReturnRequest(id) {
+  const reqs = DB.get('return_requests');
+  const req = reqs.find(r => r.id === id);
+  if (!req || (req.status || 'pending') !== 'pending') return;
+  const bors = DB.get('borrows');
+  const rec = bors.find(b => b.id === req.borrowId && !b.ret);
+  if (!rec) {
+    toast('Cannot approve: active borrow record was not found.', 'error', 'fa-search');
+    return;
+  }
+  const reviewedDate = today();
+  const reviewedTime = nowTime();
+  const days = lateDays(rec.due, reviewedDate);
+  const fee = lateFee(days);
+  if (!confirm(`Approve return request?\n\nStudent: ${req.sname}\nMaterial: ${acqLabel(req)} - ${req.title}\nLate fee: PHP ${fee}`)) return;
+
+  rec.ret = reviewedDate;
+  rec.fee = fee;
+  req.status = 'approved';
+  req.reviewedDate = reviewedDate;
+  req.reviewedTime = reviewedTime;
+  req.fee = fee;
+  req.note = 'Approved by librarian';
+
+  const books = DB.get('books');
+  const book = books.find(b => normalizeAcq(b.acqNo) === normalizeAcq(rec.acqNo)) || books.find(b => b.title.toLowerCase() === rec.title.toLowerCase());
+  if (book && book.borrowed > 0) book.borrowed--;
+  const rets = DB.get('returns');
+  rets.unshift({ ...rec });
+
+  DB.set('borrows', bors);
+  DB.set('return_requests', reqs);
+  DB.set('books', books);
+  DB.set('returns', rets);
+  renderReturnRequests();
+  renderAdminBorrows();
+  renderReturnHistory();
+  renderBorrowBookList();
+  updateStats();
+  toast(fee > 0 ? `Return approved. Late fee: PHP ${fee}.` : 'Return approved. No late fee.', fee > 0 ? 'error' : 'success', fee > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle');
+}
+
+function rejectReturnRequest(id) {
+  const reqs = DB.get('return_requests');
+  const req = reqs.find(r => r.id === id);
+  if (!req || (req.status || 'pending') !== 'pending') return;
+  const reason = prompt(`Reason for rejecting ${req.sname}'s return request?`, 'Return request rejected by librarian');
+  if (reason === null) return;
+  req.status = 'rejected';
+  req.reviewedDate = today();
+  req.reviewedTime = nowTime();
+  req.note = reason.trim() || 'Return request rejected by librarian';
+  DB.set('return_requests', reqs);
+  renderReturnRequests();
+  updateStats();
+  toast('Return request rejected.', 'info', 'fa-times-circle');
 }
 
 function renderAdminBorrows(filter = '') {

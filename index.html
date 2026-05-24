@@ -92,6 +92,7 @@
       <button class="s-item"        id="amenu-students"       onclick="showPanel('students')">      <i class="fas fa-users"></i> Students</button>
       <button class="s-item"        id="amenu-logbook-view"   onclick="showPanel('logbook-view')">  <i class="fas fa-clipboard-list"></i> Logbook</button>
       <button class="s-item"        id="amenu-borrow-requests" onclick="showPanel('borrow-requests')"><i class="fas fa-clipboard-check"></i> Borrow Requests <span class="nav-alert hidden" id="borrow-req-count">0</span></button>
+      <button class="s-item"        id="amenu-return-requests" onclick="showPanel('return-requests')"><i class="fas fa-undo-alt"></i> Return Requests <span class="nav-alert hidden" id="return-req-count">0</span></button>
       <button class="s-item"        id="amenu-borrow-history" onclick="showPanel('borrow-history')"><i class="fas fa-exchange-alt"></i> Borrow History</button>
       <button class="s-item"        id="amenu-reports"        onclick="showPanel('reports')">       <i class="fas fa-chart-bar"></i> Reports</button>
       <button class="s-item"        id="amenu-closed-days"    onclick="showPanel('closed-days')">   <i class="fas fa-calendar-times"></i> Closed Days</button>
@@ -125,6 +126,11 @@
       <div class="a-panel" id="apanel-borrow-requests">
         <h2 class="ptitle">Borrow Requests</h2>
         <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clipboard-check"></i> Pending Verification</h3><input class="tsearch" placeholder="Search..." oninput="filterBorrowRequests(this.value)"></div><div class="tbl-scroll"><table><thead><tr><th>Requested</th><th>Student</th><th>Acq. No.</th><th>Book Title</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="tb-borrow-requests"></tbody></table></div></div>
+      </div>
+      <!-- Return Requests -->
+      <div class="a-panel" id="apanel-return-requests">
+        <h2 class="ptitle">Return Requests</h2>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-undo-alt"></i> Pending Verification</h3><input class="tsearch" placeholder="Search..." oninput="filterReturnRequests(this.value)"></div><div class="tbl-scroll"><table><thead><tr><th>Requested</th><th>Student</th><th>Acq. No.</th><th>Book Title</th><th>Due Date</th><th>Est. Fee</th><th>Status</th><th>Action</th></tr></thead><tbody id="tb-return-requests"></tbody></table></div></div>
       </div>
       <!-- Borrow History -->
       <div class="a-panel" id="apanel-borrow-history">
@@ -317,7 +323,7 @@
   <div class="pg-body">
     <div class="borrow-stack">
       <div class="card">
-        <div class="card-head"><h3><i class="fas fa-handshake"></i> Borrow Form</h3></div>
+        <div class="card-head"><h3><i class="fas fa-handshake"></i> Borrow Form Request</h3></div>
         <div class="card-body">
           <div class="form-group">
             <label class="flabel">Search Student (Name or ID)</label>
@@ -362,7 +368,7 @@
   <div class="pg-body">
     <div class="return-stack">
       <div class="card">
-        <div class="card-head"><h3><i class="fas fa-undo"></i> Return Form</h3></div>
+        <div class="card-head"><h3><i class="fas fa-undo"></i> Return Form Request</h3></div>
         <div class="card-body">
           <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="ret-sid" placeholder="02000123456" oninput="lookupStudentBorrows(this.value)"></div>
           <div class="form-group"><label class="flabel">Select Book to Return *</label><select class="fselect" id="ret-book" onchange="calcLateFee()"><option value="">- Enter Student ID first -</option></select></div>
