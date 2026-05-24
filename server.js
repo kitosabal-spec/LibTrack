@@ -3,7 +3,7 @@ const path = require('path');
 const { DatabaseSync } = require('node:sqlite');
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
 const DB_FILE = path.join(ROOT, 'library.sqlite');
 
@@ -39,6 +39,11 @@ const tableMap = {
     table: 'borrows',
     columns: ['id', 'sid', 'sname', 'acqNo', 'title', 'author', 'bdate', 'btime', 'due', 'ret', 'fee'],
     numberColumns: ['fee'],
+  },
+  borrow_requests: {
+    table: 'borrow_requests',
+    columns: ['id', 'sid', 'sname', 'course', 'sec', 'acqNo', 'title', 'author', 'requestDate', 'requestTime', 'due', 'status', 'reviewedDate', 'reviewedTime', 'note'],
+    numberColumns: [],
   },
   log: {
     table: 'log_entries',
@@ -106,6 +111,24 @@ async function initDatabase() {
     due TEXT,
     ret TEXT,
     fee INTEGER DEFAULT 0
+  )`);
+
+  await run(`CREATE TABLE IF NOT EXISTS borrow_requests (
+    id TEXT PRIMARY KEY,
+    sid TEXT,
+    sname TEXT,
+    course TEXT,
+    sec TEXT,
+    acqNo TEXT,
+    title TEXT,
+    author TEXT,
+    requestDate TEXT,
+    requestTime TEXT,
+    due TEXT,
+    status TEXT DEFAULT 'pending',
+    reviewedDate TEXT,
+    reviewedTime TEXT,
+    note TEXT
   )`);
 
   await run(`CREATE TABLE IF NOT EXISTS log_entries (

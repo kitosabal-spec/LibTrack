@@ -91,6 +91,7 @@
       <button class="s-item"        id="amenu-books"          onclick="showPanel('books')">         <i class="fas fa-book"></i> Manage Acquisition</button>
       <button class="s-item"        id="amenu-students"       onclick="showPanel('students')">      <i class="fas fa-users"></i> Students</button>
       <button class="s-item"        id="amenu-logbook-view"   onclick="showPanel('logbook-view')">  <i class="fas fa-clipboard-list"></i> Logbook</button>
+      <button class="s-item"        id="amenu-borrow-requests" onclick="showPanel('borrow-requests')"><i class="fas fa-clipboard-check"></i> Borrow Requests <span class="nav-alert hidden" id="borrow-req-count">0</span></button>
       <button class="s-item"        id="amenu-borrow-history" onclick="showPanel('borrow-history')"><i class="fas fa-exchange-alt"></i> Borrow History</button>
       <button class="s-item"        id="amenu-reports"        onclick="showPanel('reports')">       <i class="fas fa-chart-bar"></i> Reports</button>
       <button class="s-item"        id="amenu-closed-days"    onclick="showPanel('closed-days')">   <i class="fas fa-calendar-times"></i> Closed Days</button>
@@ -100,7 +101,7 @@
     <div class="admin-content">
       <!-- Dashboard -->
       <div class="a-panel active" id="apanel-overview">
-        <h2 class="ptitle">Dashboard Overview</h2>
+        <h2 class="ptitle">Dashboard</h2>
         <div class="stat-cards" id="overview-stats"></div>
         <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clock"></i> Recent Activity</h3></div><div class="tbl-scroll"><table><thead><tr><th>Type</th><th>Student</th><th>Time</th></tr></thead><tbody id="tb-activity"></tbody></table></div></div>
       </div>
@@ -119,6 +120,11 @@
       <div class="a-panel" id="apanel-logbook-view">
         <h2 class="ptitle">All Logbook Entries</h2>
         <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clipboard-list"></i> Visitor Log</h3><input class="tsearch" placeholder="Search..." oninput="filterAdminLog(this.value)"></div><div class="tbl-scroll"><table><thead><tr><th>Date</th><th>Student ID</th><th>Name</th><th>Course/Sec</th><th>Time In</th></tr></thead><tbody id="tb-log"></tbody></table></div></div>
+      </div>
+      <!-- Borrow Requests -->
+      <div class="a-panel" id="apanel-borrow-requests">
+        <h2 class="ptitle">Borrow Requests</h2>
+        <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clipboard-check"></i> Pending Verification</h3><input class="tsearch" placeholder="Search..." oninput="filterBorrowRequests(this.value)"></div><div class="tbl-scroll"><table><thead><tr><th>Requested</th><th>Student</th><th>Acq. No.</th><th>Book Title</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead><tbody id="tb-borrow-requests"></tbody></table></div></div>
       </div>
       <!-- Borrow History -->
       <div class="a-panel" id="apanel-borrow-history">
@@ -411,6 +417,28 @@
       <div class="form-group"><label class="flabel">Section</label><input class="finput" id="ms-section" placeholder="1A..."></div>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost btn-sm" onclick="closeOverlay('modal-student')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveStudent()"><i class="fas fa-save"></i> Save</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="modal-borrow-request">
+  <div class="modal">
+    <div class="modal-head"><h3>Edit Borrow Request</h3><button class="modal-x" onclick="closeOverlay('modal-borrow-request')"><i class="fas fa-times"></i></button></div>
+    <input type="hidden" id="edit-request-id">
+    <div class="frow">
+      <div class="form-group"><label class="flabel">Student ID</label><input class="finput" id="rq-sid" readonly></div>
+      <div class="form-group"><label class="flabel">Student Name</label><input class="finput" id="rq-name" readonly></div>
+    </div>
+    <div class="frow">
+      <div class="form-group"><label class="flabel">Acquisition Number *</label><input class="finput" id="rq-acq" oninput="checkEditRequestBook(this.value)"></div>
+      <div class="form-group"><label class="flabel">Due Date *</label><input class="finput" id="rq-due" type="date"></div>
+    </div>
+    <div class="frow">
+      <div class="form-group"><label class="flabel">Book Title</label><input class="finput" id="rq-title" readonly></div>
+      <div class="form-group"><label class="flabel">Author</label><input class="finput" id="rq-author" readonly></div>
+    </div>
+    <div id="rq-book-status"></div>
+    <div class="form-group"><label class="flabel">Admin Note</label><input class="finput" id="rq-note" placeholder="Optional note"></div>
+    <div class="modal-foot"><button class="btn btn-ghost btn-sm" onclick="closeOverlay('modal-borrow-request')">Cancel</button><button class="btn btn-primary btn-sm" onclick="saveBorrowRequestEdit()"><i class="fas fa-save"></i> Save Changes</button></div>
   </div>
 </div>
 

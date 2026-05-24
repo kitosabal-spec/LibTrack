@@ -3,7 +3,7 @@
 // ================================================================
 
 /* DATA STORE - now loaded from Express + SQLite */
-const COLLECTION_NAMES = ['books', 'students', 'borrows', 'log', 'returns', 'closed_days'];
+const COLLECTION_NAMES = ['books', 'students', 'borrows', 'borrow_requests', 'log', 'returns', 'closed_days'];
 const syncTimers = {};
 
 const DB = {
@@ -258,6 +258,7 @@ function updateStats() {
   if ($('stat-visits')) $('stat-visits').textContent = log.filter(l => l.date === t).length;
   if ($('stat-borrowed')) $('stat-borrowed').textContent = bors.filter(b => !b.ret).length;
   if ($('stat-students')) $('stat-students').textContent = students.length;
+  updateBorrowRequestBadge();
 }
 
 /* CLOCK */
@@ -450,6 +451,10 @@ function checkBookAvail(acq) {
     $('bor-title').value = book.title;
     $('bor-author').value = book.author;
     el.innerHTML = `<div class="avail-no"><i class="fas fa-times-circle"></i> ${book.acqNo} is currently borrowed</div>`;
+  } else if (hasPendingRequestForAcq(book.acqNo)) {
+    $('bor-title').value = book.title;
+    $('bor-author').value = book.author;
+    el.innerHTML = `<div class="avail-no"><i class="fas fa-clipboard-check"></i> ${book.acqNo} already has a pending borrowing request</div>`;
   } else if (book.borrowed >= book.copies) {
     $('bor-title').value = book.title;
     $('bor-author').value = book.author;
@@ -466,12 +471,29 @@ function setDefaultDates() {
   $('bor-return').value = addCountedDays(today(), BORROW_DAYS);
 }
 
+function pendingBorrowRequests() {
+  return DB.get('borrow_requests').filter(r => (r.status || 'pending') === 'pending');
+}
+
+function updateBorrowRequestBadge() {
+  const badge = $('borrow-req-count');
+  if (!badge) return;
+  const count = pendingBorrowRequests().length;
+  badge.textContent = count > 99 ? '99+' : String(count);
+  badge.classList.toggle('hidden', count === 0);
+  badge.title = `${count} pending borrow request${count === 1 ? '' : 's'}`;
+}
+
+function hasPendingRequestForAcq(acqNo) {
+  return pendingBorrowRequests().some(r => normalizeAcq(r.acqNo) === normalizeAcq(acqNo));
+}
+
 function doBorrow() {
   const sid    = val('bor-sid');
   const acqNo  = normalizeAcq(val('bor-acq'));
   const due    = val('bor-return');
-  const bdate  = today();
-  const btime  = nowTime();
+  const requestDate = today();
+  const requestTime = nowTime();
 
   if (!sid || !acqNo || !due) {
     toast('Fill in Student ID, Acquisition Number and Return Date.', 'error', 'fa-exclamation-circle');
@@ -496,6 +518,10 @@ function doBorrow() {
     toast('That acquisition number is already borrowed.', 'error', 'fa-exclamation-circle');
     return;
   }
+  if (hasPendingRequestForAcq(acqNo)) {
+    toast('That acquisition number already has a pending request for admin review.', 'error', 'fa-clipboard-check');
+    return;
+  }
   if (bors.find(b => b.sid === sid && b.title.toLowerCase() === book.title.toLowerCase() && !b.ret)) {
     toast('This student already has that book borrowed.', 'error', 'fa-exclamation-circle');
     return;
@@ -506,11 +532,27 @@ function doBorrow() {
     return;
   }
 
-  if (!confirm(`Confirm borrow?\n\nStudent: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nDue date: ${due}`)) return;
+  if (!confirm(`Submit borrowing request?\n\nStudent: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}\n\nThe librarian must approve this before it becomes an active borrow.`)) return;
 
-  bors.unshift({ id:'BR'+Date.now(), sid: student.sid, sname: student.name, acqNo: book.acqNo, title: book.title, author: book.author, bdate, btime, due, ret:null, fee:0 });
-  DB.set('borrows', bors);
-  if (book) { book.borrowed = (book.borrowed||0) + 1; DB.set('books', books); }
+  const reqs = DB.get('borrow_requests');
+  reqs.unshift({
+    id:'RQ'+Date.now(),
+    sid: student.sid,
+    sname: student.name,
+    course: student.course || '',
+    sec: student.sec || '',
+    acqNo: book.acqNo,
+    title: book.title,
+    author: book.author,
+    requestDate,
+    requestTime,
+    due,
+    status:'pending',
+    reviewedDate:'',
+    reviewedTime:'',
+    note:'',
+  });
+  DB.set('borrow_requests', reqs);
 
   ['bor-sid','bor-name','bor-acq','bor-title','bor-author'].forEach(id => $(id).value = '');
   $('bor-search').value  = '';
@@ -518,7 +560,7 @@ function doBorrow() {
   setDefaultDates();
   renderBorrowBookList();
   updateStats();
-  toast(`${book.acqNo} - "${book.title}" borrowed by ${student.name}!`, 'success', 'fa-check-circle');
+  toast(`Borrowing request sent for ${book.acqNo}. Please wait for librarian approval.`, 'success', 'fa-paper-plane');
 }
 
 function renderBorrowBookList(filter = '') {
@@ -541,13 +583,14 @@ function renderBorrowBookList(filter = '') {
   }
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><i class="fas fa-book"></i><span>No materials found.</span></div></td></tr>`; return; }
   tbody.innerHTML = rows.map(b => {
-    const unavailable = DB.get('borrows').some(x => normalizeAcq(x.acqNo) === normalizeAcq(b.acqNo) && !x.ret) || (b.borrowed || 0) >= (b.copies || 1);
+    const pending = hasPendingRequestForAcq(b.acqNo);
+    const unavailable = DB.get('borrows').some(x => normalizeAcq(x.acqNo) === normalizeAcq(b.acqNo) && !x.ret) || pending || (b.borrowed || 0) >= (b.copies || 1);
     return `<tr>
       <td><span class="tag">${acqLabel(b)}</span></td>
       <td>${b.materialType || 'Book'}</td>
       <td><strong>${b.title || 'Untitled Acquisition'}</strong></td>
       <td>${b.author || '-'}</td>
-      <td>${unavailable?'<span class="badge badge-red"><i class="fas fa-times"></i> Borrowed</span>':'<span class="badge badge-green"><i class="fas fa-check"></i> Available</span>'}</td>
+      <td>${pending?'<span class="badge badge-amber"><i class="fas fa-clipboard-check"></i> Pending</span>':unavailable?'<span class="badge badge-red"><i class="fas fa-times"></i> Borrowed</span>':'<span class="badge badge-green"><i class="fas fa-check"></i> Available</span>'}</td>
       <td><button class="btn btn-outline btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="pickBorrowBook('${esc(acqLabel(b))}')" ${unavailable?'disabled':''}><i class="fas fa-plus"></i></button></td>
     </tr>`;
   }).join('');
@@ -727,6 +770,7 @@ function showPanel(id) {
   if (id === 'books')          renderAdminBooks();
   if (id === 'students')       renderAdminStudents();
   if (id === 'logbook-view')   renderAdminLog();
+  if (id === 'borrow-requests') renderBorrowRequests();
   if (id === 'borrow-history') renderAdminBorrows();
   if (id === 'reports')        generateReport();
   if (id === 'closed-days')    renderClosedDays();
@@ -740,11 +784,13 @@ function renderOverview() {
   const tv    = log.filter(l => l.date === t).length;
   const ab    = bors.filter(b => !b.ret).length;
   const ov    = bors.filter(b => !b.ret && isOverdue(b.due)).length;
+  const pr    = DB.get('borrow_requests').filter(r => (r.status || 'pending') === 'pending').length;
   const tb    = books.reduce((s,b) => s + b.copies, 0);
   $('overview-stats').innerHTML = [
     { n:tb,  l:'Total Books',      i:'fa-book',                 bg:'var(--blue-bg)',  c:'var(--blue)'  },
     { n:tv,  l:"Today's Visitors", i:'fa-users',                bg:'var(--green-bg)', c:'var(--green)' },
     { n:ab,  l:'Active Borrows',   i:'fa-bookmark',             bg:'var(--amber-bg)', c:'var(--amber)' },
+    { n:pr,  l:'Pending Requests', i:'fa-clipboard-check',      bg:'var(--blue-bg)',  c:'var(--blue)'  },
     { n:ov,  l:'Overdue',          i:'fa-exclamation-triangle', bg:'var(--red-bg)',   c:'var(--red)'   },
   ].map(s => `<div class="sc"><div class="sc-top"><div class="sc-ico" style="background:${s.bg};color:${s.c}"><i class="fas ${s.i}"></i></div></div><div class="sc-num" style="color:${s.c}">${s.n}</div><div class="sc-lbl">${s.l}</div></div>`).join('');
   const recent = [
@@ -909,6 +955,192 @@ function renderAdminLog(filter = '') {
   </tr>`).join('');
 }
 function filterAdminLog(v) { renderAdminLog(v); }
+
+function requestStatusBadge(status) {
+  const s = status || 'pending';
+  if (s === 'approved') return '<span class="badge badge-green"><i class="fas fa-check"></i> Approved</span>';
+  if (s === 'rejected') return '<span class="badge badge-red"><i class="fas fa-times"></i> Rejected</span>';
+  return '<span class="badge badge-amber"><i class="fas fa-clock"></i> Pending</span>';
+}
+
+function renderBorrowRequests(filter = '') {
+  const tbody = $('tb-borrow-requests');
+  if (!tbody) return;
+  let rows = DB.get('borrow_requests').slice().sort((a, b) => {
+    const rank = r => (r.status || 'pending') === 'pending' ? 0 : 1;
+    return rank(a) - rank(b) || `${b.requestDate} ${b.requestTime}`.localeCompare(`${a.requestDate} ${a.requestTime}`);
+  });
+  if (filter) {
+    const f = filter.toLowerCase();
+    rows = rows.filter(r =>
+      String(r.sid || '').toLowerCase().includes(f) ||
+      String(r.sname || '').toLowerCase().includes(f) ||
+      String(r.title || '').toLowerCase().includes(f) ||
+      acqLabel(r).toLowerCase().includes(f)
+    );
+  }
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fas fa-clipboard-check"></i><span>No borrowing requests.</span></div></td></tr>`;
+    updateBorrowRequestBadge();
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const pending = (r.status || 'pending') === 'pending';
+    return `<tr>
+      <td>${r.requestDate || '-'}<br><small style="color:var(--g500)">${r.requestTime || ''}</small></td>
+      <td><span class="tag">${r.sid}</span><br>${r.sname}<br><small style="color:var(--g500)">${r.course || '-'} ${r.sec || ''}</small></td>
+      <td><span class="tag">${acqLabel(r)}</span></td>
+      <td>${r.title}<br><small style="color:var(--g500)">${r.author || '-'}</small></td>
+      <td>${r.due || '-'}</td>
+      <td>${requestStatusBadge(r.status)}${r.note ? `<br><small style="color:var(--g500)">${r.note}</small>` : ''}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        ${pending ? `<button class="btn btn-outline btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="openEditBorrowRequest('${r.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-success btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="approveBorrowRequest('${r.id}')"><i class="fas fa-check"></i> Confirm</button><button class="btn btn-danger btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="rejectBorrowRequest('${r.id}')"><i class="fas fa-times"></i> Reject</button>` : '<span style="color:var(--g400);font-size:12px">Reviewed</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+  updateBorrowRequestBadge();
+}
+function filterBorrowRequests(v) { renderBorrowRequests(v); }
+
+function openEditBorrowRequest(id) {
+  const req = DB.get('borrow_requests').find(r => r.id === id);
+  if (!req || (req.status || 'pending') !== 'pending') return;
+  $('edit-request-id').value = req.id;
+  $('rq-sid').value = req.sid || '';
+  $('rq-name').value = req.sname || '';
+  $('rq-acq').value = acqLabel(req);
+  $('rq-due').value = req.due || today();
+  $('rq-title').value = req.title || '';
+  $('rq-author').value = req.author || '';
+  $('rq-note').value = req.note || '';
+  $('rq-book-status').innerHTML = '';
+  openOverlay('modal-borrow-request');
+}
+
+function checkEditRequestBook(acq) {
+  const status = $('rq-book-status');
+  if (!status) return null;
+  $('rq-title').value = '';
+  $('rq-author').value = '';
+  if (!acq.trim()) {
+    status.innerHTML = '';
+    return null;
+  }
+  const book = findBookByAcq(acq);
+  if (!book) {
+    status.innerHTML = `<div class="avail-unk"><i class="fas fa-search"></i> No material found with acquisition number ${acq}</div>`;
+    return null;
+  }
+  $('rq-title').value = book.title || '';
+  $('rq-author').value = book.author || '';
+  const currentId = val('edit-request-id');
+  const borrowed = DB.get('borrows').some(b => normalizeAcq(b.acqNo) === normalizeAcq(book.acqNo) && !b.ret);
+  const pendingOther = pendingBorrowRequests().some(r => r.id !== currentId && normalizeAcq(r.acqNo) === normalizeAcq(book.acqNo));
+  if (borrowed) {
+    status.innerHTML = `<div class="avail-no"><i class="fas fa-times-circle"></i> ${book.acqNo} is currently borrowed</div>`;
+  } else if (pendingOther) {
+    status.innerHTML = `<div class="avail-no"><i class="fas fa-clipboard-check"></i> ${book.acqNo} already has another pending request</div>`;
+  } else {
+    status.innerHTML = `<div class="avail-yes"><i class="fas fa-check-circle"></i> ${book.acqNo} is available for this request</div>`;
+  }
+  return { book, borrowed, pendingOther };
+}
+
+function saveBorrowRequestEdit() {
+  const id = val('edit-request-id');
+  const acqNo = normalizeAcq(val('rq-acq'));
+  const due = val('rq-due');
+  if (!id || !acqNo || !due) {
+    toast('Fill in acquisition number and due date.', 'error', 'fa-exclamation-circle');
+    return;
+  }
+  const reqs = DB.get('borrow_requests');
+  const req = reqs.find(r => r.id === id);
+  if (!req || (req.status || 'pending') !== 'pending') return;
+  const check = checkEditRequestBook(acqNo);
+  if (!check?.book) {
+    toast('No material found with that acquisition number.', 'error', 'fa-search');
+    return;
+  }
+  if (check.borrowed || check.pendingOther) {
+    toast('This material is not available for this request.', 'error', 'fa-exclamation-circle');
+    return;
+  }
+  req.acqNo = check.book.acqNo;
+  req.title = check.book.title || '';
+  req.author = check.book.author || '';
+  req.due = due;
+  req.note = val('rq-note');
+  DB.set('borrow_requests', reqs);
+  closeOverlay('modal-borrow-request');
+  renderBorrowRequests();
+  renderBorrowBookList();
+  updateStats();
+  toast('Borrow request updated.', 'success', 'fa-save');
+}
+
+function approveBorrowRequest(id) {
+  const reqs = DB.get('borrow_requests');
+  const req = reqs.find(r => r.id === id);
+  if (!req || (req.status || 'pending') !== 'pending') return;
+
+  const books = DB.get('books');
+  const book = books.find(b => normalizeAcq(b.acqNo) === normalizeAcq(req.acqNo));
+  if (!book) {
+    toast('Cannot approve: acquisition number no longer exists.', 'error', 'fa-search');
+    return;
+  }
+
+  const bors = DB.get('borrows');
+  if (bors.some(b => normalizeAcq(b.acqNo) === normalizeAcq(req.acqNo) && !b.ret)) {
+    toast('Cannot approve: this acquisition number is already borrowed.', 'error', 'fa-exclamation-circle');
+    return;
+  }
+  if (bors.some(b => b.sid === req.sid && normalizeAcq(b.acqNo) === normalizeAcq(req.acqNo) && !b.ret)) {
+    toast('Cannot approve: this student already has this material.', 'error', 'fa-exclamation-circle');
+    return;
+  }
+  if ((book.borrowed || 0) >= (book.copies || 1)) {
+    toast('Cannot approve: all copies are already borrowed.', 'error', 'fa-times-circle');
+    return;
+  }
+  if (!confirm(`Approve borrowing request?\n\nStudent: ${req.sname}\nMaterial: ${acqLabel(req)} - ${req.title}\nDue date: ${req.due}`)) return;
+
+  const reviewedDate = today();
+  const reviewedTime = nowTime();
+  bors.unshift({ id:'BR'+Date.now(), sid:req.sid, sname:req.sname, acqNo:req.acqNo, title:req.title, author:req.author, bdate:reviewedDate, btime:reviewedTime, due:req.due, ret:null, fee:0 });
+  req.status = 'approved';
+  req.reviewedDate = reviewedDate;
+  req.reviewedTime = reviewedTime;
+  req.note = 'Approved by librarian';
+  book.borrowed = (book.borrowed || 0) + 1;
+
+  DB.set('borrows', bors);
+  DB.set('borrow_requests', reqs);
+  DB.set('books', books);
+  renderBorrowRequests();
+  renderAdminBorrows();
+  renderBorrowBookList();
+  updateStats();
+  toast('Borrowing request approved.', 'success', 'fa-check-circle');
+}
+
+function rejectBorrowRequest(id) {
+  const reqs = DB.get('borrow_requests');
+  const req = reqs.find(r => r.id === id);
+  if (!req || (req.status || 'pending') !== 'pending') return;
+  const reason = prompt(`Reason for rejecting ${req.sname}'s request?`, 'Request rejected by librarian');
+  if (reason === null) return;
+  req.status = 'rejected';
+  req.reviewedDate = today();
+  req.reviewedTime = nowTime();
+  req.note = reason.trim() || 'Request rejected by librarian';
+  DB.set('borrow_requests', reqs);
+  renderBorrowRequests();
+  renderBorrowBookList();
+  updateStats();
+  toast('Borrowing request rejected.', 'info', 'fa-times-circle');
+}
 
 function renderAdminBorrows(filter = '') {
   const tbody = $('tb-borrows');
