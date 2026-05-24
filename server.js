@@ -351,6 +351,22 @@ app.post('/api/recover-password', async (req, res, next) => {
   }
 });
 
+app.post('/api/change-recovery-password', async (req, res, next) => {
+  try {
+    const { currentRecoveryPassword, newRecoveryPassword } = req.body;
+    const savedRecovery = await get('SELECT value FROM settings WHERE key = ?', ['recovery_pass']);
+    const currentRecovery = String(currentRecoveryPassword || '').trim();
+    const nextRecovery = String(newRecoveryPassword || '').trim();
+    if (!currentRecovery || !nextRecovery) return res.status(400).json({ error: 'Missing recovery password.' });
+    if (currentRecovery !== String(savedRecovery?.value || '').trim()) return res.status(401).json({ error: 'Current recovery password is incorrect.' });
+    if (nextRecovery.length < 6) return res.status(400).json({ error: 'New recovery password must be at least 6 characters.' });
+    await run('UPDATE settings SET value = ? WHERE key = ?', [nextRecovery, 'recovery_pass']);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(ROOT, 'index.html'));
 });

@@ -844,6 +844,27 @@ async function changePassword() {
   }
 }
 
+async function changeRecoveryPassword() {
+  const cur = $('rp-cur').value.trim();
+  const nw  = $('rp-set-new').value.trim();
+  const con = $('rp-set-con').value.trim();
+  if (!cur || !nw || !con)    { toast('Fill in all recovery password fields.', 'error', 'fa-exclamation-circle'); return; }
+  if (nw.length < 6)          { toast('New recovery password must be at least 6 characters.', 'error', 'fa-exclamation-circle'); return; }
+  if (nw !== con)             { toast('New recovery passwords do not match.', 'error', 'fa-times-circle'); return; }
+  if (!await appConfirm('Are you sure you want to change the recovery password?', { title:'Change Recovery Password', icon:'fa-shield-alt' })) return;
+
+  try {
+    await apiJson('/api/change-recovery-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentRecoveryPassword: cur, newRecoveryPassword: nw }),
+    });
+    ['rp-cur','rp-set-new','rp-set-con'].forEach(id => $(id).value = '');
+    toast('Recovery password updated.', 'success', 'fa-shield-alt');
+  } catch (err) {
+    toast(err.message || 'Recovery password update failed.', 'error', 'fa-times-circle');
+  }
+}
+
 /* ADMIN PANELS */
 function showPanel(id) {
   document.querySelectorAll('.a-panel').forEach(p => p.classList.remove('active'));
