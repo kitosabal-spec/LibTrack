@@ -66,8 +66,35 @@
       <label class="flabel">Password</label>
       <div class="input-icon-wrap"><i class="fas fa-lock"></i><input class="finput" id="l-pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()"><button class="eye-btn" id="eye-btn" onclick="toggleEye()"><i class="fas fa-eye"></i></button></div>
     </div>
+    <div class="login-extra"><button type="button" class="link-btn" onclick="openRecoveryPassword()">Forgot password?</button></div>
     <button class="btn btn-primary btn-full btn-lg" onclick="doLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
     <button class="btn btn-ghost btn-full" onclick="closeOverlay('modal-login')" style="margin-top:8px;">Cancel</button>
+  </div>
+</div>
+
+<!-- PASSWORD RECOVERY MODAL -->
+<div class="overlay" id="modal-recovery">
+  <div class="modal login-modal">
+    <div class="login-header">
+      <div class="login-icon"><i class="fas fa-key"></i></div>
+      <h2>Recover Password</h2>
+      <p>Enter the recovery password to set a new admin password.</p>
+    </div>
+    <div class="login-err hidden" id="recovery-err"><i class="fas fa-exclamation-circle"></i> <span id="recovery-err-msg">Recovery failed.</span></div>
+    <div class="form-group">
+      <label class="flabel">Recovery Password</label>
+      <div class="input-icon-wrap"><i class="fas fa-shield-alt"></i><input class="finput" id="rp-code" type="password" placeholder="Recovery password"></div>
+    </div>
+    <div class="form-group">
+      <label class="flabel">New Password</label>
+      <div class="input-icon-wrap"><i class="fas fa-lock"></i><input class="finput" id="rp-new" type="password" placeholder="New password (min 6 chars)"></div>
+    </div>
+    <div class="form-group">
+      <label class="flabel">Confirm New Password</label>
+      <div class="input-icon-wrap"><i class="fas fa-lock"></i><input class="finput" id="rp-con" type="password" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')recoverPassword()"></div>
+    </div>
+    <button class="btn btn-primary btn-full btn-lg" onclick="recoverPassword()"><i class="fas fa-save"></i> Reset Password</button>
+    <button class="btn btn-ghost btn-full" onclick="closeOverlay('modal-recovery')" style="margin-top:8px;">Cancel</button>
   </div>
 </div>
 
@@ -102,7 +129,7 @@
     <div class="admin-content">
       <!-- Dashboard -->
       <div class="a-panel active" id="apanel-overview">
-        <h2 class="ptitle">Dashboard</h2>
+        <h2 class="ptitle">Dashboard Overview</h2>
         <div class="stat-cards" id="overview-stats"></div>
         <div class="analytics-grid" id="overview-analytics"></div>
         <div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-clock"></i> Recent Activity</h3></div><div class="tbl-scroll"><table><thead><tr><th>Type</th><th>Student</th><th>Time</th></tr></thead><tbody id="tb-activity"></tbody></table></div></div>
@@ -114,7 +141,7 @@
       </div>
       <!-- Students -->
       <div class="a-panel" id="apanel-students">
-        <div class="panel-head"><h2 class="ptitle">Registered Students</h2><div style="display:flex;gap:8px;flex-wrap:wrap;"><input class="tsearch" placeholder="Search..." oninput="filterStudents(this.value)" style="width:200px"><button class="btn btn-primary btn-sm" onclick="openAddStudent()"><i class="fas fa-user-plus"></i> Add Student</button></div></div>
+        <div class="panel-head"><h2 class="ptitle">Registered Students</h2><div style="display:flex;gap:8px;flex-wrap:wrap;"><select class="fselect tselect" id="student-year-filter" onchange="filterStudents()"><option value="">All Year / Grade</option></select><input class="tsearch" id="student-search" placeholder="Search..." oninput="filterStudents()" style="width:200px"><button class="btn btn-primary btn-sm" onclick="openAddStudent()"><i class="fas fa-user-plus"></i> Add Student</button></div></div>
         <p style="font-size:13px;color:#6b7280;margin-bottom:12px;"><i class="fas fa-info-circle" style="color:#2563eb"></i> Students listed here appear in the autocomplete search on the Logbook page.</p>
         <div class="tbl-wrap"><div class="tbl-scroll"><table><thead><tr><th>Student ID</th><th>Full Name</th><th>Course</th><th>Section</th><th>Actions</th></tr></thead><tbody id="tb-students"></tbody></table></div></div>
       </div>

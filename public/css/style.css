@@ -2109,6 +2109,28 @@ body.admin-mode .admin-wrap {
   margin-bottom: 16px;
 }
 
+.login-extra {
+  display: flex;
+  justify-content: center;
+  margin: -4px 0 16px;
+}
+
+.link-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
 .login-hint {
   text-align: center;
   font-size: 12px;

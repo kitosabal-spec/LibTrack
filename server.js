@@ -196,6 +196,10 @@ async function initDatabase() {
     await run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_user', 'admin']);
     await run('INSERT INTO settings (key, value) VALUES (?, ?)', ['admin_pass', 'sti2024']);
   }
+  const recoveryPass = await get('SELECT value FROM settings WHERE key = ?', ['recovery_pass']);
+  if (!recoveryPass) {
+    await run('INSERT INTO settings (key, value) VALUES (?, ?)', ['recovery_pass', 'sti-recover']); //Recovery Password
+  }
 
   const bookCount = await get('SELECT COUNT(*) AS count FROM books');
   if (bookCount.count === 0) {
@@ -324,6 +328,23 @@ app.post('/api/change-password', async (req, res, next) => {
     if (currentPassword !== adminPass?.value) return res.status(401).json({ error: 'Current password is incorrect.' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
     await run('UPDATE settings SET value = ? WHERE key = ?', [newPassword, 'admin_pass']);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/recover-password', async (req, res, next) => {
+  try {
+    const { recoveryPassword, newPassword } = req.body;
+    const savedRecovery = await get('SELECT value FROM settings WHERE key = ?', ['recovery_pass']);
+    if (!recoveryPassword || !newPassword) return res.status(400).json({ error: 'Missing recovery password or new password.' });
+    const typedRecovery = String(recoveryPassword).trim();
+    const currentRecovery = String(savedRecovery?.value || '').trim();
+    if (typedRecovery !== currentRecovery) return res.status(401).json({ error: 'Recovery password is incorrect. Use sti-recover.' });
+    const nextPassword = String(newPassword).trim();
+    if (nextPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+    await run('UPDATE settings SET value = ? WHERE key = ?', [nextPassword, 'admin_pass']);
     res.json({ ok: true });
   } catch (err) {
     next(err);

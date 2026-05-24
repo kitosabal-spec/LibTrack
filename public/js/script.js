@@ -52,6 +52,7 @@ async function syncCollection(key) {
 const $   = id  => document.getElementById(id);
 const val = id  => ($( id )?.value || '').trim();
 const esc = s   => String(s).replace(/'/g, "\\'");
+const escapeAttr = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const today = () => new Date().toISOString().split('T')[0];
 const nowTime = () => new Date().toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit', hour12:true });
 const nowDateTime = () => new Date().toLocaleString('en-PH', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true });
@@ -747,11 +748,55 @@ function showLoginErr(msg) {
   $('login-err').classList.remove('hidden');
 }
 
+function showRecoveryErr(msg) {
+  $('recovery-err-msg').textContent = msg;
+  $('recovery-err').classList.remove('hidden');
+}
+
 function toggleEye() {
   const inp = $('l-pass');
   const ic  = $('eye-btn').querySelector('i');
   inp.type  = inp.type === 'password' ? 'text' : 'password';
   ic.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+}
+
+function openRecoveryPassword() {
+  ['rp-code', 'rp-new', 'rp-con'].forEach(id => $(id).value = '');
+  $('recovery-err').classList.add('hidden');
+  closeOverlay('modal-login');
+  openOverlay('modal-recovery');
+  setTimeout(() => $('rp-code').focus(), 200);
+}
+
+async function recoverPassword() {
+  const recoveryPassword = $('rp-code').value.trim();
+  const newPassword = $('rp-new').value.trim();
+  const confirmPassword = $('rp-con').value.trim();
+
+  if (!recoveryPassword || !newPassword || !confirmPassword) {
+    showRecoveryErr('Fill in all recovery fields.');
+    return;
+  }
+  if (newPassword.length < 6) {
+    showRecoveryErr('New password must be at least 6 characters.');
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    showRecoveryErr('New passwords do not match.');
+    return;
+  }
+
+  try {
+    await apiJson('/api/recover-password', {
+      method: 'POST',
+      body: JSON.stringify({ recoveryPassword, newPassword }),
+    });
+    closeOverlay('modal-recovery');
+    toast('Admin password reset. You can now log in with the new password.', 'success', 'fa-key');
+    openAdminLogin();
+  } catch (err) {
+    showRecoveryErr(err.message || 'Password recovery failed.');
+  }
 }
 
 function enterAdmin() {
@@ -1020,10 +1065,32 @@ async function deleteBook(id) {
   renderAdminBooks(); updateStats(); toast('Book removed.', 'info', 'fa-trash');
 }
 
+function renderStudentYearFilter(students) {
+  const select = $('student-year-filter');
+  if (!select) return;
+  const current = select.value;
+  const years = [...new Set(students.map(s => String(s.sec || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric:true }));
+  select.innerHTML = `<option value="">All Year / Grade</option>` + years.map(y => `<option value="${escapeAttr(y)}">${y}</option>`).join('');
+  if (years.includes(current)) select.value = current;
+}
+
 function renderAdminStudents(filter = '') {
   const tbody = $('tb-students');
-  let ss      = DB.get('students');
-  if (filter) { const f = filter.toLowerCase(); ss = ss.filter(s => s.name.toLowerCase().includes(f) || s.sid.toLowerCase().includes(f)); }
+  const allStudents = DB.get('students');
+  let ss = allStudents;
+  renderStudentYearFilter(allStudents);
+  const yearFilter = val('student-year-filter');
+  if (!filter) filter = val('student-search');
+  if (yearFilter) ss = ss.filter(s => String(s.sec || '').trim() === yearFilter);
+  if (filter) {
+    const f = filter.toLowerCase();
+    ss = ss.filter(s =>
+      String(s.name || '').toLowerCase().includes(f) ||
+      String(s.sid || '').toLowerCase().includes(f) ||
+      String(s.course || '').toLowerCase().includes(f) ||
+      String(s.sec || '').toLowerCase().includes(f)
+    );
+  }
   if (!ss.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><i class="fas fa-users"></i><span>No students yet.</span></div></td></tr>`; return; }
   tbody.innerHTML = ss.map(s => `<tr>
     <td><span class="tag">${s.sid}</span></td><td><strong>${s.name}</strong></td><td>${s.course||'-'}</td><td>${s.sec||'-'}</td>
@@ -1033,7 +1100,7 @@ function renderAdminStudents(filter = '') {
     </td>
   </tr>`).join('');
 }
-function filterStudents(v) { renderAdminStudents(v); }
+function filterStudents(v = '') { renderAdminStudents(v); }
 
 function openAddStudent() {
   $('student-modal-title').textContent = 'Add New Student';
