@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>STI College Naga - Library System</title>
+  <link rel="icon" type="image/png" href="public/images/logolibtrack.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="public/css/style.css">
@@ -13,7 +14,7 @@
 <!-- NAVBAR -->
 <nav id="main-nav">
   <div class="nav-brand" onclick="showPage('home')">
-    <div class="nav-logo"><i class="fas fa-book-open"></i></div>
+    <div class="nav-logo"><img src="public/images/logolibtrack.png" alt="LibTrack logo"></div>
     <div class="nav-title">LibTrack<span>Library System</span></div>
   </div>
   <div class="nav-links" id="nav-links">
@@ -34,7 +35,7 @@
 <div class="drawer" id="drawer">
   <div class="drawer-top">
     <div style="display:flex;align-items:center;gap:10px;">
-      <div class="nav-logo"><i class="fas fa-book-open"></i></div>
+      <div class="nav-logo"><img src="public/images/logolibtrack.png" alt="LibTrack logo"></div>
       <div class="nav-title">STI College Naga<span>Library System</span></div>
     </div>
     <button class="drawer-x" onclick="toggleDrawer()"><i class="fas fa-times"></i></button>
@@ -80,7 +81,7 @@
     <div class="admin-bar-right">
       <span class="admin-user"><i class="fas fa-user-shield"></i> <span id="admin-uname">admin</span></span>
       <button class="theme-btn" id="admin-theme-toggle" onclick="toggleTheme()" title="Switch theme" aria-label="Switch theme"><i class="fas fa-moon"></i></button>
-      <button class="btn btn-outline btn-sm" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+      <button class="btn btn-danger btn-sm" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </div>
   </div>
   <div class="admin-wrap">
@@ -97,7 +98,6 @@
       <button class="s-item"        id="amenu-reports"        onclick="showPanel('reports')">       <i class="fas fa-chart-bar"></i> Reports</button>
       <button class="s-item"        id="amenu-closed-days"    onclick="showPanel('closed-days')">   <i class="fas fa-calendar-times"></i> Closed Days</button>
       <button class="s-item"        id="amenu-settings"       onclick="showPanel('settings')">      <i class="fas fa-cog"></i> Settings</button>
-      <button class="s-item s-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </aside>
     <div class="admin-content">
       <!-- Dashboard -->
