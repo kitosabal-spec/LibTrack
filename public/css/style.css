@@ -1756,6 +1756,56 @@ body.admin-mode .admin-wrap {
   margin-bottom: 20px;
 }
 
+.report-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  background: var(--surface);
+  border: var(--bd);
+  border-radius: var(--r2);
+  box-shadow: var(--sh1);
+  padding: 14px;
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.report-stat {
+  background: var(--surface);
+  border: var(--bd);
+  border-radius: var(--r2);
+  padding: 14px;
+  box-shadow: var(--sh1);
+}
+
+.report-stat strong {
+  display: block;
+  color: var(--blue);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.report-stat span {
+  display: block;
+  margin-top: 4px;
+  color: var(--g500);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 /* ── LOGIN MODAL ── */
 .overlay {
   display: none;
@@ -2077,6 +2127,16 @@ body.admin-mode .admin-wrap {
   }
 
   .rpt-btns .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .report-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .report-actions,
+  .report-actions .btn {
     width: 100%;
     justify-content: center;
   }

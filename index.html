@@ -87,7 +87,7 @@
     <aside class="admin-sidebar">
       <div class="sidebar-badge">STI College Naga</div>
       <div class="sidebar-lbl">Admin Panel</div>
-      <button class="s-item active" id="amenu-overview"       onclick="showPanel('overview')">     <i class="fas fa-tachometer-alt"></i> Overview</button>
+      <button class="s-item active" id="amenu-overview"       onclick="showPanel('overview')">     <i class="fas fa-tachometer-alt"></i> Dashboard</button>
       <button class="s-item"        id="amenu-books"          onclick="showPanel('books')">         <i class="fas fa-book"></i> Manage Acquisition</button>
       <button class="s-item"        id="amenu-students"       onclick="showPanel('students')">      <i class="fas fa-users"></i> Students</button>
       <button class="s-item"        id="amenu-logbook-view"   onclick="showPanel('logbook-view')">  <i class="fas fa-clipboard-list"></i> Logbook</button>
@@ -98,7 +98,7 @@
       <button class="s-item s-logout" onclick="adminLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
     </aside>
     <div class="admin-content">
-      <!-- Overview -->
+      <!-- Dashboard -->
       <div class="a-panel active" id="apanel-overview">
         <h2 class="ptitle">Dashboard Overview</h2>
         <div class="stat-cards" id="overview-stats"></div>
@@ -127,14 +127,31 @@
       </div>
       <!-- Reports -->
       <div class="a-panel" id="apanel-reports">
-        <h2 class="ptitle">Auto Report Generator</h2>
-        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Tap any report type to generate instantly.</p>
-        <div class="rpt-btns">
-          <button class="btn btn-primary"  onclick="genReport('daily')">  <i class="fas fa-calendar-day"></i> Daily Visitors</button>
-          <button class="btn btn-success"  onclick="genReport('attendance')"><i class="fas fa-user-check"></i> Student Attendance</button>
-          <button class="btn btn-success"  onclick="genReport('borrowed')"><i class="fas fa-book"></i> Borrowed Books</button>
-          <button class="btn btn-danger"   onclick="genReport('overdue')"> <i class="fas fa-exclamation-triangle"></i> Overdue</button>
-          <button class="btn btn-outline"  onclick="genReport('all')">     <i class="fas fa-file-alt"></i> Full Report</button>
+        <h2 class="ptitle">Reports Generation</h2>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Generate date-filtered reports, then print or export them.</p>
+        <div class="report-controls">
+          <div class="form-group">
+            <label class="flabel">Report Type</label>
+            <select class="fselect" id="report-type" onchange="generateReport()">
+              <option value="borrowing">Borrowing History</option>
+              <option value="attendance">Attendance Logs</option>
+              <option value="overdue">Overdue Items</option>
+              <option value="fines">Fine Collections</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="flabel">From</label>
+            <input class="finput" id="report-from" type="date" onchange="generateReport()">
+          </div>
+          <div class="form-group">
+            <label class="flabel">To</label>
+            <input class="finput" id="report-to" type="date" onchange="generateReport()">
+          </div>
+          <div class="report-actions">
+            <button class="btn btn-primary btn-sm" onclick="generateReport()"><i class="fas fa-filter"></i> Generate</button>
+            <button class="btn btn-outline btn-sm" onclick="printCurrentReport()"><i class="fas fa-print"></i> Print</button>
+            <button class="btn btn-success btn-sm" onclick="exportCurrentReport()"><i class="fas fa-file-excel"></i> Export</button>
+          </div>
         </div>
         <div id="rpt-out" style="margin-top:20px;"></div>
       </div>

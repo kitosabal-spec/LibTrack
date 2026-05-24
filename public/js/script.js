@@ -728,6 +728,7 @@ function showPanel(id) {
   if (id === 'students')       renderAdminStudents();
   if (id === 'logbook-view')   renderAdminLog();
   if (id === 'borrow-history') renderAdminBorrows();
+  if (id === 'reports')        generateReport();
   if (id === 'closed-days')    renderClosedDays();
 }
 
@@ -971,7 +972,9 @@ function deleteClosedDay(id) {
   toast('Closed day removed.', 'info', 'fa-trash');
 }
 
-function excelCell(value) {
+let currentReport = null;
+
+function reportCell(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -979,69 +982,189 @@ function excelCell(value) {
     .replace(/"/g, '&quot;');
 }
 
-function downloadExcelReport(filename, sheetName, columns, rows) {
-  if (!rows.length) {
-    toast('No attendance records to export.', 'error', 'fa-file-excel');
+function reportMoney(value) {
+  return `PHP ${Number(value || 0).toFixed(2)}`;
+}
+
+function inDateRange(date, from, to) {
+  if (!date) return false;
+  if (from && date < from) return false;
+  if (to && date > to) return false;
+  return true;
+}
+
+function reportRangeText(from, to) {
+  if (from && to) return `${from} to ${to}`;
+  if (from) return `From ${from}`;
+  if (to) return `Until ${to}`;
+  return 'All dates';
+}
+
+function reportStatus(b) {
+  if (b.ret) return 'Returned';
+  return isOverdue(b.due) ? 'Overdue' : 'Active';
+}
+
+function buildReport(type, from = '', to = '') {
+  const bors = DB.get('borrows');
+  const logs = DB.get('log');
+  const returns = DB.get('returns').length ? DB.get('returns') : bors.filter(b => b.ret);
+  const base = { type, from, to, range: reportRangeText(from, to), generated: new Date().toLocaleString('en-PH') };
+
+  if (type === 'attendance') {
+    const rows = logs.filter(l => inDateRange(l.date, from, to)).sort((a, b) => `${b.date} ${b.tin}`.localeCompare(`${a.date} ${a.tin}`));
+    return {
+      ...base,
+      title: 'Attendance Logs',
+      icon: 'fa-user-check',
+      filename: `attendance-logs-${today()}.xls`,
+      stats: [{ label:'Attendance Records', value:rows.length }, { label:'Unique Students', value:new Set(rows.map(r => r.sid)).size }],
+      columns: [
+        { label:'Date', value:r => r.date },
+        { label:'Student ID', value:r => r.sid },
+        { label:'Name', value:r => r.name },
+        { label:'Course/Sec', value:r => `${r.course || '-'} ${r.sec || ''}`.trim() },
+        { label:'Time In', value:r => r.tin },
+      ],
+      rows,
+    };
+  }
+
+  if (type === 'overdue') {
+    const rows = bors.filter(b => !b.ret && isOverdue(b.due) && inDateRange(b.due, from, to)).sort((a, b) => a.due.localeCompare(b.due));
+    return {
+      ...base,
+      title: 'Overdue Items',
+      icon: 'fa-exclamation-triangle',
+      filename: `overdue-items-${today()}.xls`,
+      stats: [{ label:'Overdue Items', value:rows.length }, { label:'Estimated Fines', value:reportMoney(rows.reduce((s, r) => s + lateFee(lateDays(r.due)), 0)) }],
+      columns: [
+        { label:'Student ID', value:r => r.sid },
+        { label:'Student Name', value:r => r.sname },
+        { label:'Acq. No.', value:r => acqLabel(r) },
+        { label:'Book Title', value:r => r.title },
+        { label:'Borrowed', value:r => borrowStamp(r) },
+        { label:'Due Date', value:r => r.due },
+        { label:'Counted Days Late', value:r => lateDays(r.due) },
+        { label:'Estimated Fine', value:r => reportMoney(lateFee(lateDays(r.due))) },
+      ],
+      rows,
+    };
+  }
+
+  if (type === 'fines') {
+    const rows = returns.filter(r => Number(r.fee || 0) > 0 && inDateRange(r.ret, from, to)).sort((a, b) => String(b.ret || '').localeCompare(String(a.ret || '')));
+    return {
+      ...base,
+      title: 'Fine Collections',
+      icon: 'fa-coins',
+      filename: `fine-collections-${today()}.xls`,
+      stats: [{ label:'Paid Fine Records', value:rows.length }, { label:'Total Fines Collected', value:reportMoney(rows.reduce((s, r) => s + Number(r.fee || 0), 0)) }],
+      columns: [
+        { label:'Return Date', value:r => r.ret },
+        { label:'Student ID', value:r => r.sid },
+        { label:'Student Name', value:r => r.sname },
+        { label:'Acq. No.', value:r => acqLabel(r) },
+        { label:'Book Title', value:r => r.title },
+        { label:'Due Date', value:r => r.due },
+        { label:'Fine Collected', value:r => reportMoney(r.fee) },
+      ],
+      rows,
+    };
+  }
+
+  const rows = bors.filter(b => inDateRange(b.bdate, from, to)).sort((a, b) => `${b.bdate} ${b.btime}`.localeCompare(`${a.bdate} ${a.btime}`));
+  return {
+    ...base,
+    title: 'Borrowing History',
+    icon: 'fa-exchange-alt',
+    filename: `borrowing-history-${today()}.xls`,
+    stats: [{ label:'Borrow Records', value:rows.length }, { label:'Returned', value:rows.filter(r => r.ret).length }, { label:'Active', value:rows.filter(r => !r.ret).length }],
+    columns: [
+      { label:'Student ID', value:r => r.sid },
+      { label:'Student Name', value:r => r.sname },
+      { label:'Acq. No.', value:r => acqLabel(r) },
+      { label:'Book Title', value:r => r.title },
+      { label:'Author', value:r => r.author || '-' },
+      { label:'Borrowed', value:r => borrowStamp(r) },
+      { label:'Due Date', value:r => r.due },
+      { label:'Returned', value:r => r.ret || '-' },
+      { label:'Fine', value:r => reportMoney(r.fee) },
+      { label:'Status', value:reportStatus },
+    ],
+    rows,
+  };
+}
+
+function reportTableHtml(report, forPrint = false) {
+  const empty = `<tr><td colspan="${report.columns.length}"><div class="empty"><i class="fas fa-inbox"></i><span>No records found for this date range.</span></div></td></tr>`;
+  const rows = report.rows.length
+    ? report.rows.map(row => `<tr>${report.columns.map(col => `<td>${reportCell(col.value(row))}</td>`).join('')}</tr>`).join('')
+    : empty;
+  const summary = report.stats.map(s => `<div class="report-stat"><strong>${reportCell(s.value)}</strong><span>${reportCell(s.label)}</span></div>`).join('');
+  const actions = forPrint ? '' : `<div class="report-actions"><button class="btn btn-outline btn-sm" onclick="printCurrentReport()"><i class="fas fa-print"></i> Print</button><button class="btn btn-success btn-sm" onclick="exportCurrentReport()"><i class="fas fa-file-excel"></i> Export</button></div>`;
+  return `<div id="printable-report"><div class="report-summary">${summary}</div><div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas ${report.icon}"></i> ${reportCell(report.title)} <small style="font-weight:600;color:var(--g500)">(${reportCell(report.range)})</small></h3>${actions}<span class="badge badge-blue">${report.rows.length} records</span></div><div class="tbl-scroll"><table><thead><tr>${report.columns.map(col => `<th>${reportCell(col.label)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div><p style="font-size:12px;color:var(--g400);text-align:center;margin-top:12px">Generated on ${reportCell(report.generated)}</p></div>`;
+}
+
+function downloadExcelReport(report) {
+  if (!report.rows.length) {
+    toast('No records to export.', 'error', 'fa-file-excel');
     return;
   }
-  const table = `<table><thead><tr>${columns.map(c => `<th>${excelCell(c.label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(c => `<td>${excelCell(typeof c.value === 'function' ? c.value(row) : row[c.value])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px}th{background:#e8f1ff;font-weight:bold}</style></head><body><h2>${excelCell(sheetName)}</h2><p>Generated: ${excelCell(new Date().toLocaleString('en-PH'))}</p>${table}</body></html>`;
+  const table = `<table><thead><tr>${report.columns.map(c => `<th>${reportCell(c.label)}</th>`).join('')}</tr></thead><tbody>${report.rows.map(row => `<tr>${report.columns.map(c => `<td>${reportCell(c.value(row))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>table{border-collapse:collapse}th,td{border:1px solid #999;padding:6px}th{background:#e8f1ff;font-weight:bold}</style></head><body><h2>${reportCell(report.title)}</h2><p>Date Range: ${reportCell(report.range)}</p><p>Generated: ${reportCell(report.generated)}</p>${table}</body></html>`;
   const blob = new Blob([html], { type:'application/vnd.ms-excel;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = filename;
+  link.download = report.filename;
   document.body.appendChild(link);
   link.click();
   URL.revokeObjectURL(link.href);
   link.remove();
-  toast('Attendance report exported to Excel.', 'success', 'fa-file-excel');
+  toast('Report exported to Excel.', 'success', 'fa-file-excel');
+}
+
+function generateReport(type = val('report-type') || 'borrowing') {
+  const from = val('report-from');
+  const to = val('report-to');
+  if (from && to && from > to) {
+    toast('The start date must be before the end date.', 'error', 'fa-calendar-times');
+    return;
+  }
+  if ($('report-type')) $('report-type').value = type;
+  currentReport = buildReport(type, from, to);
+  $('rpt-out').innerHTML = reportTableHtml(currentReport);
+  toast('Report generated!', 'success', 'fa-file-alt');
+}
+
+function exportCurrentReport() {
+  if (!currentReport) generateReport();
+  if (currentReport) downloadExcelReport(currentReport);
+}
+
+function printCurrentReport() {
+  if (!currentReport) generateReport();
+  if (!currentReport) return;
+  const printWindow = window.open('', '_blank', 'width=1100,height=700');
+  if (!printWindow) {
+    toast('Allow popups to print this report.', 'error', 'fa-print');
+    return;
+  }
+  printWindow.document.write(`<!doctype html><html><head><title>${reportCell(currentReport.title)}</title><style>body{font-family:Arial,sans-serif;color:#111;padding:24px}h1{font-size:22px;margin:0 0 4px}p{font-size:12px;color:#555}.report-summary{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.report-stat{border:1px solid #ccc;padding:10px;min-width:120px}.report-stat strong{display:block;font-size:20px}.report-stat span{font-size:10px;text-transform:uppercase;color:#555}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #999;padding:6px;text-align:left}th{background:#eee}.tbl-bar{display:block}.badge,.report-actions,.empty i{display:none}</style></head><body><h1>${reportCell(currentReport.title)}</h1><p>Date Range: ${reportCell(currentReport.range)} | Generated: ${reportCell(currentReport.generated)}</p>${reportTableHtml(currentReport, true)}<script>window.onload=function(){window.print();window.close();}<\/script></body></html>`);
+  printWindow.document.close();
 }
 
 function attendanceReportRows() {
-  return DB.get('log')
-    .slice()
-    .sort((a, b) => `${b.date} ${b.tin}`.localeCompare(`${a.date} ${a.tin}`));
+  return buildReport('attendance').rows;
 }
 
 function exportAttendanceExcel() {
-  const rows = attendanceReportRows();
-  const columns = [
-    { label:'Date', value:'date' },
-    { label:'Student ID', value:'sid' },
-    { label:'Name', value:'name' },
-    { label:'Course', value:'course' },
-    { label:'Section', value:'sec' },
-    { label:'Time In', value:'tin' },
-  ];
-  downloadExcelReport(`student-attendance-${today()}.xls`, 'Student Attendance Report', columns, rows);
+  downloadExcelReport(buildReport('attendance'));
 }
 
 function genReport(type) {
-  const t    = today();
-  const log  = DB.get('log');
-  const bors = DB.get('borrows');
-  const books= DB.get('books');
-  const out  = $('rpt-out');
-  if (type === 'daily') {
-    const tl = log.filter(l => l.date === t);
-    out.innerHTML = `<div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-calendar-day"></i> Daily Visitors - ${t}</h3><span class="badge badge-blue">${tl.length} visitors</span></div><div class="tbl-scroll"><table><thead><tr><th>ID</th><th>Name</th><th>Course</th><th>Time In</th></tr></thead><tbody>${tl.length?tl.map(l=>`<tr><td><span class="tag">${l.sid}</span></td><td>${l.name}</td><td>${l.course||'-'}</td><td>${l.tin}</td></tr>`).join(''):`<tr><td colspan="4"><div class="empty"><i class="fas fa-inbox"></i><span>No visitors today.</span></div></td></tr>`}</tbody></table></div></div>`;
-  } else if (type === 'attendance') {
-    const rows = attendanceReportRows();
-    out.innerHTML = `<div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-user-check"></i> Student Attendance Report</h3><button class="btn btn-success btn-sm" onclick="exportAttendanceExcel()"><i class="fas fa-file-excel"></i> Export Excel</button><span class="badge badge-blue">${rows.length} records</span></div><div class="tbl-scroll"><table><thead><tr><th>Date</th><th>Student ID</th><th>Name</th><th>Course/Sec</th><th>Time In</th></tr></thead><tbody>${rows.length?rows.map(l=>`<tr><td>${l.date}</td><td><span class="tag">${l.sid}</span></td><td>${l.name}</td><td>${l.course||'-'} ${l.sec||''}</td><td>${l.tin}</td></tr>`).join(''):`<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><span>No attendance records yet.</span></div></td></tr>`}</tbody></table></div></div>`;
-  } else if (type === 'borrowed') {
-    const ac = bors.filter(b => !b.ret);
-    out.innerHTML = `<div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-book"></i> Currently Borrowed</h3><span class="badge badge-amber">${ac.length} books</span></div><div class="tbl-scroll"><table><thead><tr><th>Student</th><th>Acq. No.</th><th>Book Title</th><th>Borrowed</th><th>Due</th><th>Status</th></tr></thead><tbody>${ac.length?ac.map(b=>{const ov=isOverdue(b.due);return`<tr class="${ov?'overdue-row':''}"><td>${b.sname}<br><span class="tag">${b.sid}</span></td><td><span class="tag">${acqLabel(b)}</span></td><td>${b.title}</td><td>${borrowStamp(b)}</td><td>${b.due}</td><td>${ov?'<span class="badge badge-red">Overdue</span>':'<span class="badge badge-green">Active</span>'}</td></tr>`}).join(''):`<tr><td colspan="6"><div class="empty"><i class="fas fa-book"></i><span>No active borrows.</span></div></td></tr>`}</tbody></table></div></div>`;
-  } else if (type === 'overdue') {
-    const ov = bors.filter(b => !b.ret && isOverdue(b.due));
-    out.innerHTML = `<div class="tbl-wrap"><div class="tbl-bar"><h3><i class="fas fa-exclamation-triangle"></i> Overdue Books</h3><span class="badge badge-red">${ov.length} overdue</span></div><div class="tbl-scroll"><table><thead><tr><th>Student</th><th>Acq. No.</th><th>Book Title</th><th>Due Date</th><th>Days</th><th>Est. Fee</th></tr></thead><tbody>${ov.length?ov.map(b=>{const d=lateDays(b.due);return`<tr class="overdue-row"><td>${b.sname}<br><span class="tag">${b.sid}</span></td><td><span class="tag">${acqLabel(b)}</span></td><td>${b.title}</td><td>${b.due}</td><td><span class="badge badge-red">${d} counted days</span></td><td><span class="badge badge-red">&#8369;${lateFee(d)}</span></td></tr>`}).join(''):`<tr><td colspan="6"><div class="empty"><i class="fas fa-check-circle" style="color:var(--green)"></i><span style="color:var(--green)">No overdue books!</span></div></td></tr>`}</tbody></table></div></div>`;
-  } else {
-    const students = DB.get('students');
-    out.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px">
-      ${[{n:students.length,l:'Registered Students'},{n:log.length,l:'Total Visits'},{n:bors.length,l:'Total Borrows'},{n:bors.filter(b=>b.ret).length,l:'Returned'},{n:bors.filter(b=>!b.ret&&isOverdue(b.due)).length,l:'Overdue',c:'var(--red)'},{n:'&#8369;'+bors.reduce((s,b)=>s+(b.fee||0),0),l:'Fees Collected'}]
-        .map(s=>`<div class="tbl-wrap" style="padding:16px;text-align:center"><div style="font-size:26px;font-weight:700;color:${s.c||'var(--blue)'};">${s.n}</div><div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--g500);margin-top:4px">${s.l}</div></div>`).join('')}
-    </div><p style="font-size:12px;color:var(--g400);text-align:center">Generated on ${new Date().toLocaleString('en-PH')}</p>`;
-  }
-  toast('Report generated!', 'success', 'fa-file-alt');
+  const map = { daily:'attendance', borrowed:'borrowing', all:'borrowing' };
+  generateReport(map[type] || type || 'borrowing');
 }
 
 /* OVERLAY / MODAL */
