@@ -245,17 +245,17 @@
               <div class="ac-row"><i class="fas fa-search ac-icon"></i><input class="finput ac-input" id="in-search" placeholder="Type name or ID to find student..." oninput="searchForTimeIn(this.value)" autocomplete="off"></div>
               <div class="ac-drop" id="in-drop"></div>
             </div>
-            <div class="form-hint">Click a name to auto-fill. First-time visitors can fill manually.</div>
+            <div class="form-hint">Click a registered student to auto-fill.</div>
           </div>
           <div class="sep-label">Student Details</div>
           <div class="frow">
-            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="in-id"     placeholder="e.g. 02000123456"></div>
-            <div class="form-group"><label class="flabel">Full Name *</label>  <input class="finput" id="in-name"   placeholder="Juan Dela Cruz"></div>
+            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="in-id"     placeholder="Select a registered student" readonly></div>
+            <div class="form-group"><label class="flabel">Full Name *</label>  <input class="finput" id="in-name"   placeholder="Select a registered student" readonly></div>
           </div>
           <div class="frow">
             <div class="form-group">
               <label class="flabel">Course</label>
-              <select class="fselect" id="in-course">
+              <select class="fselect" id="in-course" disabled>
                 <option value="">Select course</option>
                 <option value="BSIT">BSIT</option>
                 <option value="BSHM">BSHM</option>
@@ -266,7 +266,7 @@
                 <option value="JHS">JHS</option>
               </select>
             </div>
-            <div class="form-group"><label class="flabel">Section</label> <input class="finput" id="in-section" placeholder="1A, 2B..."></div>
+            <div class="form-group"><label class="flabel">Section</label> <input class="finput" id="in-section" placeholder="Select a registered student" readonly></div>
           </div>
           <button class="btn btn-primary btn-full btn-lg" onclick="doTimeIn()"><i class="fas fa-sign-in-alt"></i> Log Time In Now</button>
         </div>
@@ -289,7 +289,7 @@
 
 <!-- BORROW -->
 <div class="page" id="page-borrow">
-  <div class="pg-banner"><div class="pg-banner-in"><div class="pg-icon"><i class="fas fa-book"></i></div><div><h2>Borrow a Book</h2><p>Search the acquisition number and enter your details - simple and fast.</p></div></div></div>
+  <div class="pg-banner"><div class="pg-banner-in"><div class="pg-icon"><i class="fas fa-book"></i></div><div><h2>Borrow a Book</h2><p>Search your registered student record and the acquisition number - simple and fast.</p></div></div></div>
   <div class="pg-body">
     <div class="borrow-stack">
       <div class="card">
@@ -303,8 +303,8 @@
             </div>
           </div>
           <div class="frow">
-            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="bor-sid"   placeholder="02000123456"></div>
-            <div class="form-group"><label class="flabel">Student Name *</label><input class="finput" id="bor-name" placeholder="Full name"></div>
+            <div class="form-group"><label class="flabel">Student ID *</label><input class="finput" id="bor-sid"   placeholder="Select a registered student" readonly></div>
+            <div class="form-group"><label class="flabel">Student Name *</label><input class="finput" id="bor-name" placeholder="Select a registered student" readonly></div>
           </div>
           <div class="sep-label">Book Details</div>
           <div class="form-group">
