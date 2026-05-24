@@ -1936,6 +1936,18 @@ body.admin-mode .admin-wrap {
   white-space: pre-line;
 }
 
+.confirm-highlight {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: var(--r2);
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-bdr);
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .confirm-actions {
   justify-content: center;
 }

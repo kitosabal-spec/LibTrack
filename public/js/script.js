@@ -554,7 +554,7 @@ async function doBorrow() {
     return;
   }
 
-  if (!await appConfirm(`Submit borrowing request?\n\nStudent: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}\n\nThe librarian must approve this before it becomes an active borrow.`, { title:'Submit Borrow Request', icon:'fa-paper-plane' })) return;
+  if (!await appConfirm(`Student: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}`, { title:'Submit Borrow Request', icon:'fa-paper-plane', highlight:'The librarian must approve this before it becomes an active borrow.' })) return;
 
   const reqs = DB.get('borrow_requests');
   reqs.unshift({
@@ -663,7 +663,7 @@ async function doReturn() {
   }
   const days = lateDays(rec.due, rd);
   const fee  = lateFee(days);
-  if (!await appConfirm(`Submit return request?\n\nStudent: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}\n\nThe librarian must approve this before it becomes an official return.`, { title:'Submit Return Request', icon:'fa-paper-plane' })) return;
+  if (!await appConfirm(`Student: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}`, { title:'Submit Return Request', icon:'fa-paper-plane', highlight:'The librarian must approve this before it becomes an official return.' })) return;
 
   const reqs = DB.get('return_requests');
   reqs.unshift({
@@ -1544,8 +1544,11 @@ function appConfirm(message, options = {}) {
     const cancel = $('confirm-cancel');
     const inputWrap = $('confirm-input-wrap');
     const input = $('confirm-input');
+    const highlight = $('confirm-highlight');
     $('confirm-title').textContent = options.title || 'Confirm Action';
     $('confirm-message').textContent = message;
+    highlight.textContent = options.highlight || '';
+    highlight.classList.toggle('hidden', !options.highlight);
     $('confirm-icon').innerHTML = `<i class="fas ${options.icon || 'fa-question'}"></i>`;
     ok.textContent = options.okText || 'Confirm';
     ok.className = `btn ${options.okClass || 'btn-primary'} btn-sm`;
@@ -1575,8 +1578,11 @@ function appPrompt(message, defaultValue = '', options = {}) {
     const cancel = $('confirm-cancel');
     const inputWrap = $('confirm-input-wrap');
     const input = $('confirm-input');
+    const highlight = $('confirm-highlight');
     $('confirm-title').textContent = options.title || 'Add Note';
     $('confirm-message').textContent = message;
+    highlight.textContent = options.highlight || '';
+    highlight.classList.toggle('hidden', !options.highlight);
     $('confirm-icon').innerHTML = `<i class="fas ${options.icon || 'fa-pen'}"></i>`;
     ok.textContent = options.okText || 'Save';
     ok.className = `btn ${options.okClass || 'btn-primary'} btn-sm`;
