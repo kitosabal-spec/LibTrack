@@ -201,52 +201,6 @@ async function initDatabase() {
     await run('INSERT INTO settings (key, value) VALUES (?, ?)', ['recovery_pass', 'sti-recover']); //Recovery Password
   }
 
-  const bookCount = await get('SELECT COUNT(*) AS count FROM books');
-  if (bookCount.count === 0) {
-    await seedDatabase();
-  }
-}
-
-async function seedDatabase() {
-  const t = today();
-  const books = [
-    { id:'B001', acqNo:'ACQ-0001', title:'Introduction to Programming', author:'John Zelle', category:'Technology', copies:3, borrowed:1, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B002', acqNo:'ACQ-0002', title:'Discrete Mathematics', author:'Kenneth Rosen', category:'Mathematics', copies:2, borrowed:0, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B003', acqNo:'ACQ-0003', title:'Data Structures and Algorithms', author:'Thomas Cormen', category:'Technology', copies:4, borrowed:2, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B004', acqNo:'ACQ-0004', title:'Philippine History', author:'Teodoro Agoncillo', category:'History', copies:3, borrowed:1, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B005', acqNo:'ACQ-0005', title:'Noli Me Tangere', author:'Jose Rizal', category:'Literature', copies:5, borrowed:0, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B006', acqNo:'ACQ-0006', title:'General Chemistry', author:'Zumdahl & Zumdahl', category:'Science', copies:2, borrowed:1, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B007', acqNo:'ACQ-0007', title:'El Filibusterismo', author:'Jose Rizal', category:'Literature', copies:4, borrowed:0, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B008', acqNo:'ACQ-0008', title:'Calculus: Early Transcendentals', author:'James Stewart', category:'Mathematics', copies:3, borrowed:1, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B009', acqNo:'ACQ-0009', title:'Web Development with JavaScript', author:'Jon Duckett', category:'Technology', copies:2, borrowed:0, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-    { id:'B010', acqNo:'ACQ-0010', title:'Fundamentals of Nursing', author:'Potter & Perry', category:'Science', copies:3, borrowed:2, acquiredDate:t, materialType:'Book', pubYear:'2024' },
-  ];
-
-  const students = [
-    { id:'S001', sid:'2024-00101', name:'Maria Santos', course:'BSIT', sec:'2A' },
-    { id:'S002', sid:'2024-00102', name:'Juan Reyes', course:'BSCS', sec:'3B' },
-    { id:'S003', sid:'2024-00103', name:'Ana Cruz', course:'BSBA', sec:'1C' },
-    { id:'S004', sid:'2024-00104', name:'Carlo Dela Torre', course:'BSN', sec:'2B' },
-    { id:'S005', sid:'2024-00105', name:'Lisa Mendoza', course:'BSIT', sec:'1A' },
-    { id:'S006', sid:'2024-00106', name:'Mark Aquino', course:'BSCS', sec:'2A' },
-    { id:'S007', sid:'2024-00107', name:'Rhea Villanueva', course:'BSBA', sec:'3A' },
-    { id:'S008', sid:'2024-00108', name:'Nico Bautista', course:'BSIT', sec:'1B' },
-  ];
-
-  const borrows = [
-    { id:'BR001', sid:'2024-00101', sname:'Maria Santos', acqNo:'ACQ-0001', title:'Introduction to Programming', author:'John Zelle', bdate:t, btime:'08:30 AM', due:t, ret:'', fee:0 },
-    { id:'BR002', sid:'2024-00102', sname:'Juan Reyes', acqNo:'ACQ-0003', title:'Data Structures and Algorithms', author:'Thomas Cormen', bdate:t, btime:'09:15 AM', due:t, ret:'', fee:0 },
-  ];
-
-  const logRows = [
-    { id:'L001', sid:'2024-00101', name:'Maria Santos', course:'BSIT', sec:'2A', tin:'08:15 AM', date:t },
-    { id:'L002', sid:'2024-00102', name:'Juan Reyes', course:'BSCS', sec:'3B', tin:'09:00 AM', date:t },
-  ];
-
-  await replaceCollection('books', books);
-  await replaceCollection('students', students);
-  await replaceCollection('borrows', borrows);
-  await replaceCollection('log', logRows);
 }
 
 async function readCollection(key) {
