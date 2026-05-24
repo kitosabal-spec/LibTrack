@@ -728,6 +728,20 @@ body.admin-mode #main-nav {
   font-size: 12px;
 }
 
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.btn-icon i {
+  width: 1em;
+  margin: 0;
+  text-align: center;
+}
+
 .btn-lg {
   height: 46px;
   font-size: 15px;

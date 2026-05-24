@@ -993,8 +993,8 @@ function renderBorrowRequests(filter = '') {
       <td>${r.title}<br><small style="color:var(--g500)">${r.author || '-'}</small></td>
       <td>${r.due || '-'}</td>
       <td>${requestStatusBadge(r.status)}${r.note ? `<br><small style="color:var(--g500)">${r.note}</small>` : ''}</td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">
-        ${pending ? `<button class="btn btn-outline btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="openEditBorrowRequest('${r.id}')"><i class="fas fa-edit"></i> Edit</button><button class="btn btn-success btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="approveBorrowRequest('${r.id}')"><i class="fas fa-check"></i> Confirm</button><button class="btn btn-danger btn-sm" style="height:28px;padding:0 10px;font-size:11px" onclick="rejectBorrowRequest('${r.id}')"><i class="fas fa-times"></i> Reject</button>` : '<span style="color:var(--g400);font-size:12px">Reviewed</span>'}
+      <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        ${pending ? `<button class="btn btn-outline btn-icon" onclick="openEditBorrowRequest('${r.id}')" title="Edit" aria-label="Edit"><i class="fas fa-edit"></i></button><button class="btn btn-success btn-icon" onclick="approveBorrowRequest('${r.id}')" title="Confirm" aria-label="Confirm"><i class="fas fa-check"></i></button><button class="btn btn-danger btn-icon" onclick="rejectBorrowRequest('${r.id}')" title="Reject" aria-label="Reject"><i class="fas fa-times"></i></button>` : '<span style="color:var(--g400);font-size:12px">Reviewed</span>'}
       </td>
     </tr>`;
   }).join('');
