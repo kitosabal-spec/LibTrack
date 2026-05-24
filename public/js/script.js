@@ -840,6 +840,96 @@ function renderOverview() {
   $('tb-activity').innerHTML = recent.length
     ? recent.map(r => `<tr><td><span class="badge ${r.b}">${r.t}</span></td><td>${r.s}</td><td>${r.tm}</td></tr>`).join('')
     : `<tr><td colspan="3"><div class="empty"><i class="fas fa-inbox"></i><span>No recent activity.</span></div></td></tr>`;
+  renderOverviewAnalytics();
+}
+
+function lastDays(count) {
+  const days = [];
+  const d = new Date();
+  for (let i = count - 1; i >= 0; i--) {
+    const x = new Date(d);
+    x.setDate(d.getDate() - i);
+    days.push(dateKey(x));
+  }
+  return days;
+}
+
+function shortDateLabel(date) {
+  const d = parseDate(date);
+  return d ? d.toLocaleDateString('en-PH', { month:'short', day:'numeric' }) : date;
+}
+
+function chartCard(title, icon, body) {
+  return `<div class="chart-card"><div class="chart-head"><i class="fas ${icon}"></i> ${title}</div>${body}</div>`;
+}
+
+function emptyChart(message) {
+  return `<div class="chart-empty">${message}</div>`;
+}
+
+function renderBorrowFrequencyChart(days, rows) {
+  const counts = days.map(day => ({ day, value: rows.filter(b => b.bdate === day).length }));
+  const max = Math.max(1, ...counts.map(x => x.value));
+  const w = 360, h = 190, pad = 28, gap = 9;
+  const barW = (w - pad * 2 - gap * (counts.length - 1)) / counts.length;
+  const bars = counts.map((x, i) => {
+    const bh = Math.max(2, (h - 64) * x.value / max);
+    const bx = pad + i * (barW + gap);
+    const by = h - 34 - bh;
+    return `<rect x="${bx}" y="${by}" width="${barW}" height="${bh}" rx="4" fill="var(--blue)"></rect><text x="${bx + barW / 2}" y="${h - 16}" text-anchor="middle" class="chart-label">${shortDateLabel(x.day).replace(' ', '\n')}</text><text x="${bx + barW / 2}" y="${by - 5}" text-anchor="middle" class="chart-value">${x.value}</text>`;
+  }).join('');
+  return `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Borrowing frequency bar chart"><line x1="${pad}" y1="${h - 34}" x2="${w - pad}" y2="${h - 34}" stroke="var(--g200)"></line>${bars}</svg>`;
+}
+
+function renderAttendanceTrendChart(days, rows) {
+  const counts = days.map(day => ({ day, value: rows.filter(l => l.date === day).length }));
+  const max = Math.max(1, ...counts.map(x => x.value));
+  const w = 360, h = 190, padX = 30, top = 22, bottom = 38;
+  const step = (w - padX * 2) / Math.max(1, counts.length - 1);
+  const points = counts.map((x, i) => {
+    const px = padX + i * step;
+    const py = h - bottom - ((h - top - bottom) * x.value / max);
+    return { ...x, px, py };
+  });
+  const line = points.map(p => `${p.px},${p.py}`).join(' ');
+  const dots = points.map(p => `<circle cx="${p.px}" cy="${p.py}" r="4" fill="var(--green)"></circle><text x="${p.px}" y="${p.py - 8}" text-anchor="middle" class="chart-value">${p.value}</text><text x="${p.px}" y="${h - 16}" text-anchor="middle" class="chart-label">${shortDateLabel(p.day)}</text>`).join('');
+  return `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" role="img" aria-label="Attendance trend line graph"><line x1="${padX}" y1="${h - bottom}" x2="${w - padX}" y2="${h - bottom}" stroke="var(--g200)"></line><polyline points="${line}" fill="none" stroke="var(--green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>${dots}</svg>`;
+}
+
+function renderPopularBooksChart(rows) {
+  const colors = ['#2563eb', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed'];
+  const counts = rows.reduce((acc, b) => {
+    const key = b.title || 'Untitled';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const data = Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
+  const total = data.reduce((s, x) => s + x.value, 0);
+  if (!total) return emptyChart('No borrowing data yet.');
+  let offset = 0;
+  const radius = 48;
+  const circ = 2 * Math.PI * radius;
+  const slices = data.map((x, i) => {
+    const len = circ * x.value / total;
+    const el = `<circle cx="72" cy="72" r="${radius}" fill="none" stroke="${colors[i]}" stroke-width="28" stroke-dasharray="${len} ${circ - len}" stroke-dashoffset="${-offset}" transform="rotate(-90 72 72)"></circle>`;
+    offset += len;
+    return el;
+  }).join('');
+  const legend = data.map((x, i) => `<div class="pie-item"><span class="pie-dot" style="background:${colors[i]}"></span><span class="pie-name">${x.name}</span><strong>${x.value}</strong></div>`).join('');
+  return `<div class="pie-wrap"><svg viewBox="0 0 144 144" class="chart-svg" style="height:145px" role="img" aria-label="Popular books pie chart">${slices}<circle cx="72" cy="72" r="31" fill="var(--surface)"></circle><text x="72" y="69" text-anchor="middle" class="chart-value">${total}</text><text x="72" y="83" text-anchor="middle" class="chart-label">borrows</text></svg><div class="pie-legend">${legend}</div></div>`;
+}
+
+function renderOverviewAnalytics() {
+  const wrap = $('overview-analytics');
+  if (!wrap) return;
+  const days = lastDays(7);
+  const bors = DB.get('borrows');
+  const log = DB.get('log');
+  wrap.innerHTML = [
+    chartCard('Borrowing Frequency', 'fa-chart-column', renderBorrowFrequencyChart(days, bors)),
+    chartCard('Attendance Trends', 'fa-chart-line', renderAttendanceTrendChart(days, log)),
+    chartCard('Popular Books', 'fa-chart-pie', renderPopularBooksChart(bors)),
+  ].join('');
 }
 
 function renderAdminBooks(filter = '') {

@@ -1778,6 +1778,101 @@ body.admin-mode .admin-wrap {
   margin-top: 2px;
 }
 
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: var(--bd);
+  border-radius: var(--r);
+  box-shadow: var(--sh1);
+  padding: 14px;
+  min-width: 0;
+}
+
+.chart-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--g800);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chart-head i {
+  color: var(--blue);
+}
+
+.chart-svg {
+  width: 100%;
+  height: 190px;
+  display: block;
+}
+
+.chart-label {
+  fill: var(--g500);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.chart-value {
+  fill: var(--g700);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.chart-empty {
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--g400);
+  font-size: 13px;
+  border: 1px dashed var(--g200);
+  border-radius: var(--r2);
+}
+
+.pie-wrap {
+  display: grid;
+  grid-template-columns: 145px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.pie-legend {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.pie-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--g600);
+  font-size: 11px;
+  min-width: 0;
+}
+
+.pie-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.pie-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rpt-btns {
   display: flex;
   gap: 8px;
@@ -2215,6 +2310,14 @@ body.admin-mode .admin-wrap {
   .report-actions .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pie-wrap {
+    grid-template-columns: 1fr;
   }
 
   .admin-wrap {
