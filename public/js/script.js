@@ -554,7 +554,7 @@ async function doBorrow() {
     return;
   }
 
-  if (!await appConfirm(`Student: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}`, { title:'Submit Borrow Request', icon:'fa-paper-plane', highlight:'The librarian must approve this before it becomes an active borrow.' })) return;
+  if (!await appConfirm(`Student: ${student.name}\nMaterial: ${book.acqNo} - ${book.title}\nRequested due date: ${due}`, { title:'Submit Borrow Request', icon:'fa-paper-plane', highlight:'The librarian must approve this before it becomes an active borrow. Please proceed to the librarian for confirmation.' })) return;
 
   const reqs = DB.get('borrow_requests');
   reqs.unshift({
@@ -663,7 +663,7 @@ async function doReturn() {
   }
   const days = lateDays(rec.due, rd);
   const fee  = lateFee(days);
-  if (!await appConfirm(`Student: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}`, { title:'Submit Return Request', icon:'fa-paper-plane', highlight:'The librarian must approve this before it becomes an official return.' })) return;
+  if (!await appConfirm(`Student: ${rec.sname}\nMaterial: ${acqLabel(rec)} - ${rec.title}\nEstimated late fee: PHP ${fee}`, { title:'Submit Return Request', icon:'fa-paper-plane', highlight:'The librarian must approve this before it becomes an official return. Please proceed to the librarian for confirmation.' })) return;
 
   const reqs = DB.get('return_requests');
   reqs.unshift({
